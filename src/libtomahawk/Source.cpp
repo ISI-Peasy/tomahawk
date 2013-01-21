@@ -95,7 +95,7 @@ Source::peerInfos() const
 
 
 collection_ptr
-Source::collection() const
+Source::dbCollection() const
 {
     if ( m_collections.length() )
     {
