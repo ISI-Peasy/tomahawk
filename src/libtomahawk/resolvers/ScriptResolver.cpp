@@ -2,6 +2,7 @@
  *
  *   Copyright 2010-2011, Christian Muehlhaeuser <muesli@tomahawk-player.org>
  *   Copyright 2010-2011, Leo Franchi            <lfranchi@kde.org>
+ *   Copyright 2013,      Teo Mrnjavac           <teo@kde.org>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@
 #include "Artist.h"
 #include "Album.h"
 #include "Pipeline.h"
+#include "ScriptCollection.h"
 #include "SourceList.h"
 
 #include "utils/TomahawkUtilsGui.h"
@@ -414,6 +416,8 @@ ScriptResolver::doSetup( const QVariantMap& m )
     m_configSent = false;
     m_num_restarts = 0;
 
+    loadCollections();
+
     if ( !m_stopped )
         Tomahawk::Pipeline::instance()->addResolver( this );
 
@@ -438,6 +442,22 @@ ScriptResolver::setupConfWidget( const QVariantMap& m )
     m_configWidget = QPointer< QWidget >( widgetFromData( uiData, 0 ) );
 
     emit changed();
+}
+
+
+void
+ScriptResolver::loadCollections()
+{
+    if ( m_capabilities.testFlag( Browsable ) )
+    {
+        m_collections.clear();
+        // at this point we assume that all the tracks browsable through a resolver belong to the local source
+        Tomahawk::collection_ptr collection( new Tomahawk::ScriptCollection( SourceList::instance()->getLocal(), this ) );
+        m_collections.append( collection );
+        emit collectionAdded( collection );
+
+        //TODO: implement multiple collections from a resolver
+    }
 }
 
 
@@ -536,5 +556,12 @@ void
 ScriptResolver::stop()
 {
     m_stopped = true;
+
+    foreach ( const Tomahawk::collection_ptr& collection, m_collections )
+    {
+        emit collectionRemoved( collection );
+    }
+    m_collections.clear();
+
     Tomahawk::Pipeline::instance()->removeResolver( this );
 }
