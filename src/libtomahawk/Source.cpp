@@ -179,7 +179,7 @@ Source::setFriendlyName( const QString& fname )
 void
 Source::addCollection( const collection_ptr& c )
 {
-    Q_ASSERT( m_collections.length() == 0 ); // only 1 source supported atm
+    //Q_ASSERT( m_collections.length() == 0 ); // only 1 source supported atm
     m_collections.append( c );
     emit collectionAdded( c );
 }
@@ -188,7 +188,7 @@ Source::addCollection( const collection_ptr& c )
 void
 Source::removeCollection( const collection_ptr& c )
 {
-    Q_ASSERT( m_collections.length() == 1 && m_collections.first() == c ); // only 1 source supported atm
+    //Q_ASSERT( m_collections.length() == 1 && m_collections.first() == c ); // only 1 source supported atm
     m_collections.removeAll( c );
     emit collectionRemoved( c );
 }
