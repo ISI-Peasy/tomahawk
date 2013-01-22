@@ -34,7 +34,8 @@
 #include <QString>
 #include <QStackedWidget>
 #include <QToolButton>
-
+#include "SourceList.h"
+#include "resolvers/ScriptCollection.h"
 #ifdef Q_OS_WIN
     #include <shobjidl.h>
 #endif
@@ -109,6 +110,10 @@ public slots:
     void fullScreenExited();
 
 private slots:
+    void debug(){
+        SourceList::instance()->getLocal()->addCollection( Tomahawk::collection_ptr( new Tomahawk::Collection( SourceList::instance()->getLocal(), "test" ) ) );
+    }
+
     void onAccountError();
 
     void onHistoryBackAvailable( bool avail );
