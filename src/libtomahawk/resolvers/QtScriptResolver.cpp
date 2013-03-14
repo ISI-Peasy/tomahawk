@@ -332,7 +332,9 @@ QtScriptResolverHelper::md5( const QByteArray& input )
 void
 QtScriptResolverHelper::addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName )
 {
-    boost::function<QSharedPointer<QIODevice>(Tomahawk::result_ptr)> fac = boost::bind( &QtScriptResolverHelper::customIODeviceFactory, this, _1 );
+    boost::function< void( const Tomahawk::result_ptr&,
+                           boost::function< void( QSharedPointer< QIODevice >& ) > )> fac =
+            boost::bind( &QtScriptResolverHelper::customIODeviceFactory, this, _1, _2 );
     Servent::instance()->registerIODeviceFactory( protocol, fac );
 
     m_urlCallback = callbackFuncName;
@@ -502,8 +504,9 @@ QtScriptResolverHelper::showWebInspector()
 }
 
 
-QSharedPointer< QIODevice >
-QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& result )
+void
+QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& result,
+                                               boost::function< void( QSharedPointer< QIODevice >& ) > callback )
 {
     QString urlStr;
     QVariantMap request;
@@ -530,14 +533,22 @@ QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& resul
         urlStr = jsResult.toString();
     }
 
+    QSharedPointer< QIODevice > sp;
     if ( urlStr.isEmpty() )
-        return QSharedPointer< QIODevice >();
+    {
+
+        callback( sp );
+        return;
+    }
 
     QUrl url = QUrl::fromEncoded( urlStr.toUtf8() );
     req.setUrl( url );
     tDebug() << "Creating a QNetowrkReply with url:" << req.url().toString();
     QNetworkReply* reply = TomahawkUtils::nam()->get( req );
-    return QSharedPointer<QIODevice>( reply, &QObject::deleteLater );
+
+    //boost::functions cannot accept temporaries as parameters
+    sp = QSharedPointer< QIODevice >( reply, &QObject::deleteLater );
+    callback( sp );
 }
 
 

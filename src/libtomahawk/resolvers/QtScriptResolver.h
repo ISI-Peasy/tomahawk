@@ -64,7 +64,6 @@ public:
     Q_INVOKABLE QByteArray base64Encode( const QByteArray& input );
     Q_INVOKABLE QByteArray base64Decode( const QByteArray& input );
 
-
     // send ID3Tags of the stream as argument of the callback function
     Q_INVOKABLE void readCloudFile( const QString& fileName, const QString& fileId, const QString& sizeS,
                   const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction,
@@ -76,7 +75,8 @@ public:
 
     Q_INVOKABLE void showWebInspector();
 
-    QSharedPointer<QIODevice> customIODeviceFactory( const Tomahawk::result_ptr& result );
+    void customIODeviceFactory( const Tomahawk::result_ptr& result,
+                                boost::function< void( QSharedPointer< QIODevice >& ) > callback ); // async
 
 public slots:
     QByteArray readRaw( const QString& fileName );
