@@ -33,6 +33,7 @@
 
 #include "utils/ImageRegistry.h"
 #include "utils/Logger.h"
+#include "utils/VorbisConverter.h"
 
 using namespace Tomahawk;
 
@@ -161,6 +162,9 @@ ContextMenu::setQueries( const QList<Tomahawk::query_ptr>& queries )
 
     if ( m_supportedActions & ActionDelete )
         m_sigmap->setMapping( addAction( queries.count() > 1 ? tr( "&Delete Items" ) : tr( "&Delete Item" ) ), ActionDelete );
+
+    if ( m_supportedActions & ActionConvertFile && itemCount() == 1 )
+        m_sigmap->setMapping( addAction( tr( "Convert" ) ), ActionConvertFile );
 
     foreach ( QAction* action, actions() )
     {
@@ -312,6 +316,15 @@ ContextMenu::onTriggered( int action )
                 d->show();
             }
             break;
+
+        case ActionConvertFile:
+            {
+                tDebug() << "Conversion started!";
+                VorbisConverter* vc = new VorbisConverter(m_queries.first());
+                vc->startConversion();
+            }
+            break;
+
 
         default:
             emit triggered( action );
