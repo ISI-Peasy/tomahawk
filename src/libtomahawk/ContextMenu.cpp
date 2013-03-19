@@ -32,6 +32,7 @@
 
 #include "utils/ImageRegistry.h"
 #include "utils/Logger.h"
+#include "utils/VorbisConverter.h"
 
 using namespace Tomahawk;
 
@@ -277,6 +278,7 @@ ContextMenu::onTriggered( int action )
                 d->show();
             }
             break;
+
 
         default:
             emit triggered( action );
