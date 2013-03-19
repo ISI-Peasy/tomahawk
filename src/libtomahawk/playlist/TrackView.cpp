@@ -650,7 +650,7 @@ TrackView::onCustomContextMenu( const QPoint& pos )
         return;
 
     if ( model() && !model()->isReadOnly() )
-        m_contextMenu->setSupportedActions( m_contextMenu->supportedActions() | ContextMenu::ActionDelete );
+        m_contextMenu->setSupportedActions( m_contextMenu->supportedActions() | ContextMenu::ActionDelete | ContextMenu::ActionConvertFile );
 
     QList<query_ptr> queries;
     foreach ( const QModelIndex& index, selectedIndexes() )

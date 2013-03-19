@@ -47,6 +47,7 @@ public:
        ActionArtistPage =   66,
        ActionAlbumPage =    67,
        ActionEditMetadata = 128,
+       ActionConvertFile = 129,
        ActionPlaylist =     256
     };
 
