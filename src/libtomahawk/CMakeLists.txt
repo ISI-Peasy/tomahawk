@@ -116,6 +116,7 @@ set( libGuiSources
     utils/WebResultHintChecker.cpp
     utils/NetworkReply.cpp
     utils/CloudStream.cpp
+    utils/VorbisConverter.cpp
 
     widgets/AnimatedCounterLabel.cpp
     widgets/BasicHeader.cpp
