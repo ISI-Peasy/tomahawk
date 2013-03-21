@@ -114,6 +114,7 @@ set( libGuiSources
     utils/SharedTimeLine.cpp
     utils/WebResultHintChecker.cpp
     utils/NetworkReply.cpp
+    utils/VorbisConverter.cpp
 
     widgets/AnimatedCounterLabel.cpp
     widgets/BasicHeader.cpp
