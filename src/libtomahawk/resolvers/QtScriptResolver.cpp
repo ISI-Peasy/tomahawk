@@ -97,6 +97,7 @@
 
 QtScriptResolverHelper::QtScriptResolverHelper( const QString& scriptPath, QtScriptResolver* parent )
     : QObject( parent )
+    , m_urlCallbackIsAsync( false )
 {
     m_scriptPath = scriptPath;
     m_resolver = parent;
@@ -332,9 +333,15 @@ QtScriptResolverHelper::md5( const QByteArray& input )
 
 
 void
-QtScriptResolverHelper::addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName )
+QtScriptResolverHelper::addCustomUrlHandler( const QString& protocol,
+                                             const QString& callbackFuncName,
+                                             const QString& isAsynchronous )
 {
-    boost::function<QSharedPointer<QIODevice>(Tomahawk::result_ptr)> fac = boost::bind( &QtScriptResolverHelper::customIODeviceFactory, this, _1 );
+    m_urlCallbackIsAsync = ( isAsynchronous.toLower() == "true" ) ? true : false;
+
+    boost::function< void( const Tomahawk::result_ptr&,
+                           boost::function< void( QSharedPointer< QIODevice >& ) > )> fac =
+            boost::bind( &QtScriptResolverHelper::customIODeviceFactory, this, _1, _2 );
     Servent::instance()->registerIODeviceFactory( protocol, fac );
 
     m_urlCallback = callbackFuncName;
@@ -524,42 +531,89 @@ QtScriptResolverHelper::showWebInspector()
 }
 
 
-QSharedPointer< QIODevice >
-QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& result )
+void
+QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& result,
+                                               boost::function< void( QSharedPointer< QIODevice >& ) > callback )
 {
-    QString urlStr;
-    QVariantMap request;
-    QNetworkRequest req;
-    QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2' );" ).arg( m_urlCallback )
-                                                                        .arg( QString( QUrl( result->url() ).toEncoded() ) );
+    //can be sync or async
+    QString origResultUrl = QString( QUrl( result->url() ).toEncoded() );
 
-    QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl ).toString();
-
-    if(jsResult.type() == QVariant::Map)
+    if ( m_urlCallbackIsAsync )
     {
-        request = jsResult.toMap();
+        QString qid = uuid();
+        QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2', '%3' );" ).arg( m_urlCallback )
+                                                                                  .arg( qid )
+                                                                                  .arg( origResultUrl );
 
-        urlStr = request["url"].toString();
-
-        QVariantMap headers = request["headers"].toMap();
-        foreach(const QString& headerName, headers.keys())
-        {
-            req.setRawHeader(headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit());
-        }
+        m_streamCallbacks.insert( qid, callback );
+        m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
     }
     else
     {
-        urlStr = jsResult.toString();
+        QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2' );" ).arg( m_urlCallback )
+                                                                            .arg( origResultUrl );
+
+        QString urlStr;
+        QNetworkRequest req;
+        QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl ).toString();
+
+        if ( jsResult.type() == QVariant::String )
+        {
+            urlStr = jsResult.toString();
+        }
+        else if ( jsResult.type() == QVariant::Map )
+        {
+            QVariantMap request = jsResult.toMap();
+
+            urlStr = request["url"].toString();
+
+            QVariantMap headers = request["headers"].toMap();
+            foreach ( const QString& headerName, headers.keys() )
+            {
+                req.setRawHeader( headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit() );
+            }
+        }
+
+        QUrl url = QUrl::fromEncoded( urlStr.toUtf8() );
+        req.setUrl( url );
+
+        returnStreamUrl( urlStr, callback );
+    }
+}
+
+
+void
+QtScriptResolverHelper::reportStreamUrl( const QString& qid,
+                                         const QString& streamUrl )
+{
+    if ( !m_streamCallbacks.contains( qid ) )
+        return;
+
+    boost::function< void( QSharedPointer< QIODevice >& ) > callback = m_streamCallbacks.take( qid );
+
+    returnStreamUrl( streamUrl, callback );
+}
+
+
+void
+QtScriptResolverHelper::returnStreamUrl( const QString& streamUrl, boost::function< void( QSharedPointer< QIODevice >& ) > callback )
+{
+    QSharedPointer< QIODevice > sp;
+    if ( streamUrl.isEmpty() )
+    {
+        callback( sp );
+        return;
     }
 
-    if ( urlStr.isEmpty() )
-        return QSharedPointer< QIODevice >();
+    QUrl url = QUrl::fromEncoded( streamUrl.toUtf8() );
+    QNetworkRequest req( url );
 
-    QUrl url = QUrl::fromEncoded( urlStr.toUtf8() );
-    req.setUrl( url );
     tDebug() << "Creating a QNetowrkReply with url:" << req.url().toString();
     QNetworkReply* reply = TomahawkUtils::nam()->get( req );
-    return QSharedPointer<QIODevice>( reply, &QObject::deleteLater );
+
+    //boost::functions cannot accept temporaries as parameters
+    sp = QSharedPointer< QIODevice >( reply, &QObject::deleteLater );
+    callback( sp );
 }
 
 
@@ -573,13 +627,14 @@ ScriptEngine::javaScriptConsoleMessage( const QString& message, int lineNumber, 
 }
 
 
-QtScriptResolver::QtScriptResolver( const QString& scriptPath )
+QtScriptResolver::QtScriptResolver( const QString& scriptPath, const QStringList& additionalScriptPaths )
     : Tomahawk::ExternalResolverGui( scriptPath )
     , m_ready( false )
     , m_stopped( true )
     , m_error( Tomahawk::ExternalResolver::NoError )
     , m_resolverHelper( new QtScriptResolverHelper( scriptPath, this ) )
     , m_signalMapper( new QSignalMapper(this) )
+    , m_requiredScriptPaths( additionalScriptPaths )
 {
     tLog() << Q_FUNC_INFO << "Loading JS resolver:" << scriptPath;
 
@@ -612,14 +667,14 @@ QtScriptResolver::~QtScriptResolver()
 }
 
 
-Tomahawk::ExternalResolver* QtScriptResolver::factory( const QString& scriptPath )
+Tomahawk::ExternalResolver* QtScriptResolver::factory( const QString& scriptPath, const QStringList& additionalScriptPaths )
 {
     ExternalResolver* res = 0;
 
     const QFileInfo fi( scriptPath );
     if ( fi.suffix() == "js" || fi.suffix() == "script" )
     {
-        res = new QtScriptResolver( scriptPath );
+        res = new QtScriptResolver( scriptPath, additionalScriptPaths );
         tLog() << Q_FUNC_INFO << scriptPath << "Loaded.";
     }
 
@@ -670,6 +725,21 @@ QtScriptResolver::init()
     jslib.open( QIODevice::ReadOnly );
     m_engine->mainFrame()->evaluateJavaScript( jslib.readAll() );
     jslib.close();
+
+    // add resolver dependencies, if any
+    foreach ( QString s, m_requiredScriptPaths )
+    {
+        QFile reqFile( s );
+        if( !reqFile.open( QIODevice::ReadOnly ) )
+        {
+            qWarning() << "Failed to read contents of file:" << s << reqFile.errorString();
+            return;
+        }
+        const QByteArray reqContents = reqFile.readAll();
+
+        m_engine->setScriptPath( s );
+        m_engine->mainFrame()->evaluateJavaScript( reqContents );
+    }
 
     // add resolver
     m_engine->setScriptPath( filePath() );

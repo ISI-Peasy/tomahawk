@@ -201,8 +201,8 @@ TomahawkApp::init()
     m_scanManager = QPointer<ScanManager>( new ScanManager( this ) );
 
 #ifndef ENABLE_HEADLESS
-    Pipeline::instance()->addExternalResolverFactory( boost::bind( &QtScriptResolver::factory, _1 ) );
-    Pipeline::instance()->addExternalResolverFactory( boost::bind( &ScriptResolver::factory, _1 ) );
+    Pipeline::instance()->addExternalResolverFactory( boost::bind( &QtScriptResolver::factory, _1, _2 ) );
+    Pipeline::instance()->addExternalResolverFactory( boost::bind( &ScriptResolver::factory, _1, _2 ) );
 
     new ActionCollection( this );
     connect( ActionCollection::instance()->getAction( "quit" ), SIGNAL( triggered() ), SLOT( quit() ), Qt::UniqueConnection );
@@ -397,6 +397,7 @@ TomahawkApp::printHelp()
     echo( "  --testdb       Use a test database instead of real collection" );
     echo( "  --noupnp       Disable UPnP" );
     echo( "  --nosip        Disable SIP" );
+    echo( "  --verbose      Increase verbosity (activates debug output)" );
     echo();
     echo( "Playback Controls:" );
     echo( "  --play         Start/resume playback" );

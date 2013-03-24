@@ -59,11 +59,11 @@ public:
     Q_INVOKABLE QString hmac( const QByteArray& key, const QByteArray& input );
     Q_INVOKABLE QString md5( const QByteArray& input );
 
-    Q_INVOKABLE void addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName );
+    Q_INVOKABLE void addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName, const QString& isAsynchronous = "false" );
+    Q_INVOKABLE void reportStreamUrl( const QString& qid, const QString& streamUrl );
 
     Q_INVOKABLE QByteArray base64Encode( const QByteArray& input );
     Q_INVOKABLE QByteArray base64Decode( const QByteArray& input );
-
 
     // send ID3Tags of the stream as argument of the callback function
     Q_INVOKABLE void
@@ -76,6 +76,9 @@ public:
     Q_INVOKABLE void showWebInspector();
 
     QSharedPointer<QIODevice> customIODeviceFactory( const Tomahawk::result_ptr& result );
+
+    void customIODeviceFactory( const Tomahawk::result_ptr& result,
+                                boost::function< void( QSharedPointer< QIODevice >& ) > callback ); // async
 
 public slots:
     QByteArray readRaw( const QString& fileName );
@@ -97,7 +100,10 @@ public slots:
     void reportCapabilities( const QVariant& capabilities );
 
 private:
+    void returnStreamUrl( const QString& streamUrl, boost::function< void( QSharedPointer< QIODevice >& ) > callback );
     QString m_scriptPath, m_urlCallback;
+    QHash< QString, boost::function< void( QSharedPointer< QIODevice >& ) > > m_streamCallbacks;
+    bool m_urlCallbackIsAsync;
     QVariantMap m_resolverConfig;
     QtScriptResolver* m_resolver;
 #ifdef QCA2_FOUND
@@ -165,9 +171,9 @@ Q_OBJECT
 friend class ::QtScriptResolverHelper;
 
 public:
-    explicit QtScriptResolver( const QString& scriptPath );
+    explicit QtScriptResolver( const QString& scriptPath, const QStringList& additionalScriptPaths = QStringList() );
     virtual ~QtScriptResolver();
-    static ExternalResolver* factory( const QString& scriptPath );
+    static ExternalResolver* factory( const QString& scriptPath, const QStringList& additionalScriptPaths = QStringList() );
 
     virtual Capabilities capabilities() const { return m_capabilities; }
 
@@ -240,6 +246,7 @@ private:
     QtScriptResolverHelper* m_resolverHelper;
     QPointer< AccountConfigWidget > m_configWidget;
     QList< QVariant > m_dataWidgets;
+    QStringList m_requiredScriptPaths;
 };
 
 #endif // QTSCRIPTRESOLVER_H
