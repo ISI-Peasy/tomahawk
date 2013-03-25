@@ -86,6 +86,8 @@
 #include <taglib/wavfile.h>
 
 #include <boost/scoped_ptr.hpp>
+
+#include "qjson/serializer.h"
 //--- end includes readcloudfile
 
 // FIXME: bloody hack, remove this for 0.3
@@ -372,13 +374,13 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
     {
         request = requestJS.toMap();
 
-        download_url = QUrl(request["url"].toString());
+        download_url = QUrl::fromUserInput(request["url"].toString());
 
         headers = request["headers"].toMap();
     }
     else
     {
-        download_url = QUrl(requestJS.toString());
+        download_url = QUrl::fromUserInput(requestJS.toString());
     }
 
     tDebug( LOGINFO ) << "#### ReadCloudFile : Loading tags of " << fileName << " from " << download_url.toString() << " which have id " << fileId;
@@ -474,23 +476,14 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
 */
     }
 
-    QString tabTagsJSON = "{";
-    //we convert the QVariantMap to JSON to give it as an argument of the callback function
-    int nbTags = m.count();
-    int i = 1;
-    foreach(const QString& tag, m.keys()) {
-        tabTagsJSON += "'" + tag + "' : '" + m[tag].toString() + "'";
-        if(i != nbTags){
-            tabTagsJSON += ", ";
-        }
-        i++;
-    }
-    tabTagsJSON += "}";
+    QJson::Serializer serializer;
 
-    tDebug() << "#### ReadCloudFile : Sending tags to js : " <<tabTagsJSON;
+    QByteArray json = serializer.serialize(m);
+
+    tDebug() << "#### ReadCloudFile : Sending tags to js : " << json;
 
     QString getUrl = QString( "Tomahawk.resolver.instance.%1( %2 );" ).arg( javascriptCallbackFunction )
-                                                                        .arg( tabTagsJSON );
+                                                                        .arg( QString(json) );
 
     m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 }

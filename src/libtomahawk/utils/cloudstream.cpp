@@ -119,42 +119,16 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
     return TagLib::ByteVector();
   }
 
+  if(num_requests_in_error_ > MAX_ALLOW_ERROR_QUERY){
+      return TagLib::ByteVector();
+  }
+
   if (CheckCache(start, end)) {
     TagLib::ByteVector cached = GetCached(start, end);
     cursor_ += cached.size();
     return cached;
   }
-/*
-  QString authorizationHeader  = headers_["Authorization"].toString();
-  QStringList authorizations = authorizationHeader.split(",");
-  QStringList oneAuthList;
-  QStringList newAuthorizationHeader;
-  foreach(const QString& oneAuth, authorizations){
-      if(oneAuth.contains("oauth_nonce")){
-          oneAuthList = oneAuth.split("=");
-           tDebug() << "######## CloudStream : oauth_nonce : " << oneAuthList[1];
-          QString oauthNonce = oneAuthList[1].replace('"',"");
 
-          tDebug() << "######## CloudStream : oauth_nonce : " << oauthNonce; //ok
-
-          int newOautNonce = oauthNonce.toInt(0,16);
-
-          tDebug() << "######## CloudStream : oauth_nonce : " << newOautNonce; // =0 !!!
-          newOautNonce++;
-          tDebug() << "######## CloudStream : NEW oauth_nonce : " << newOautNonce;
-
-          oauthNonce = QString::number(newOautNonce,16).toUpper();
-
-          newAuthorizationHeader.append(oneAuthList[0]+"=\""+oauthNonce+"\"");
-      }
-      else {
-          newAuthorizationHeader.append(oneAuth);
-      }
-  }
-
-  //QMap<QString,QVariant> newHeaders = headers_;
-  newHeaders.insert("Authorization", QVariant(newAuthorizationHeader.join(", ")));
-*/
   QNetworkRequest request = QNetworkRequest(url_);
   //setings of specials OAuth (1 or 2) headers
 
@@ -198,12 +172,18 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
   if (code != 206) {
       num_requests_in_error_++;
       tDebug( LOGINFO ) << "#### Cloudstream : Error " << code << " retrieving url to tag for " << filename_;
-      if(num_requests_in_error_ <= MAX_ALLOW_ERROR_QUERY and !javascriptRefreshUrlFunction_.isEmpty()){
+      if(!javascriptRefreshUrlFunction_.isEmpty()){
         tDebug( LOGINFO ) << "####### Cloudstream : trying to get a good URL for " << fileId_;
         QString refreshUrl = QString("resolver.%1( \"%2\" );").arg( javascriptRefreshUrlFunction_ )
               .arg( fileId_ );
         tDebug( LOGINFO ) << refreshUrl;
         QVariant response = scriptResolver_->executeJavascript(refreshUrl);
+
+
+        if(response.isNull()){
+            tDebug( LOGINFO ) << "####### Cloudstream : response is empty, returning" << response;
+            return TagLib::ByteVector();
+        }
         QVariantMap request;
         if(response.type() == QVariant::Map)
         {
