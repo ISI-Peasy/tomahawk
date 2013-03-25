@@ -28,15 +28,17 @@
 #include <taglib/tiostream.h>
 
 class QNetworkAccessManager;
+class QtScriptResolver;
 
 class CloudStream : public QObject, public TagLib::IOStream {
   Q_OBJECT
  public:
-  CloudStream(const QUrl& url,
+  CloudStream(QUrl& url,
                     const QString& filename,
+                    const QString& fileId,
                     const long length,
-                    const QVariantMap& headers,
-                    QNetworkAccessManager* network);
+                    QVariantMap& headers,
+                    QNetworkAccessManager* network, QtScriptResolver *scriptResolver, const QString& javascriptRefreshUrlFunction);
 
   //Taglib::IOStream;
   virtual TagLib::FileName name() const;
@@ -60,6 +62,10 @@ class CloudStream : public QObject, public TagLib::IOStream {
     return num_requests_;
   }
 
+  int num_requests_in_error() const {
+    return num_requests_in_error_;
+  }
+
   // Use educated guess to request the bytes that TagLib will probably want.
   void Precache();
 
@@ -72,17 +78,21 @@ class CloudStream : public QObject, public TagLib::IOStream {
   void SSLErrors(const QList<QSslError>& errors);
 
  private:
-  const QUrl url_;
+  QUrl url_;
   const QString filename_;
+  const QString fileId_;
   const QByteArray encoded_filename_;
   const ulong length_;
-  const QVariantMap headers_;
+  QVariantMap headers_;
+  const QString javascriptRefreshUrlFunction_;
 
   int cursor_;
   QNetworkAccessManager* network_;
+  QtScriptResolver* scriptResolver_;
 
   google::sparsetable<char> cache_;
   int num_requests_;
+  int num_requests_in_error_;
 };
 
 //#endif // GOOGLEDRIVESTREAM_H

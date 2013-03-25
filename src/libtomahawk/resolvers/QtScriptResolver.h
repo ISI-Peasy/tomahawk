@@ -67,7 +67,7 @@ public:
 
     // send ID3Tags of the stream as argument of the callback function
     Q_INVOKABLE void
-    ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction);
+    ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction, const QString& javascriptRefreshUrlFunction);
 
     Q_INVOKABLE void addLocalJSFile(const QString& jsFilePath);
 
@@ -195,7 +195,7 @@ public slots:
     virtual void albums( const Tomahawk::collection_ptr& collection, const Tomahawk::artist_ptr& artist );
     virtual void tracks( const Tomahawk::collection_ptr& collection, const Tomahawk::album_ptr& album );
 
-    void executeJavascript(const QString& );
+    QVariant executeJavascript(const QString& );
 
 signals:
     void stopped();

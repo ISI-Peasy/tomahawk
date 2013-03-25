@@ -29,25 +29,32 @@
 
 #include "utils/Logger.h"
 
-
+#include "resolvers/QtScriptResolver.h"
 
 namespace {
   static const int kTaglibPrefixCacheBytes = 64 * 1024;  // Should be enough.
   static const int kTaglibSuffixCacheBytes = 8 * 1024;
 }
 
+const static int MAX_ALLOW_ERROR_QUERY = 2;
+
 CloudStream::CloudStream(
-    const QUrl& url, const QString& filename, const long length,
-    const  QVariantMap& headers, QNetworkAccessManager* network)
+    QUrl& url, const QString& filename, const QString& fileId, const long length,
+    QVariantMap& headers, QNetworkAccessManager* network, QtScriptResolver* scriptResolver,
+    const QString & javascriptRefreshUrlFunction)
     : url_(url),
       filename_(filename),
+      fileId_(fileId),
       encoded_filename_(filename_.toUtf8()),
       length_(length),
       headers_(headers),
       cursor_(0),
       network_(network),
       cache_(length),
-      num_requests_(0) {
+      num_requests_(0),
+      num_requests_in_error_(0),
+      scriptResolver_(scriptResolver),
+      javascriptRefreshUrlFunction_(javascriptRefreshUrlFunction) {
     tDebug( LOGINFO ) << "#### Cloudstream : CloudStream object created for " << filename_ << " : " << url_.toString();
 }
 
@@ -117,7 +124,7 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
     cursor_ += cached.size();
     return cached;
   }
-
+/*
   QString authorizationHeader  = headers_["Authorization"].toString();
   QStringList authorizations = authorizationHeader.split(",");
   QStringList oneAuthList;
@@ -145,14 +152,14 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
       }
   }
 
-  QMap<QString,QVariant> newHeaders = headers_;
+  //QMap<QString,QVariant> newHeaders = headers_;
   newHeaders.insert("Authorization", QVariant(newAuthorizationHeader.join(", ")));
-
+*/
   QNetworkRequest request = QNetworkRequest(url_);
   //setings of specials OAuth (1 or 2) headers
 
-  foreach(const QString& headerName, newHeaders.keys()) {
-      request.setRawHeader(headerName.toLocal8Bit(), newHeaders[headerName].toString().toLocal8Bit());
+  foreach(const QString& headerName, headers_.keys()) {
+      request.setRawHeader(headerName.toLocal8Bit(), headers_[headerName].toString().toLocal8Bit());
 
   }
 
@@ -188,9 +195,40 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
       tDebug( LOGINFO ) << "#### Cloudstream : header reply " << pair;
   }
 
-  if (code >= 400) {
+  if (code != 206) {
+      num_requests_in_error_++;
       tDebug( LOGINFO ) << "#### Cloudstream : Error " << code << " retrieving url to tag for " << filename_;
-    return TagLib::ByteVector();
+      if(num_requests_in_error_ <= MAX_ALLOW_ERROR_QUERY and !javascriptRefreshUrlFunction_.isEmpty()){
+        tDebug( LOGINFO ) << "####### Cloudstream : trying to get a good URL for " << fileId_;
+        QString refreshUrl = QString("resolver.%1( \"%2\" );").arg( javascriptRefreshUrlFunction_ )
+              .arg( fileId_ );
+        tDebug( LOGINFO ) << refreshUrl;
+        QVariant response = scriptResolver_->executeJavascript(refreshUrl);
+        QVariantMap request;
+        if(response.type() == QVariant::Map)
+        {
+            request = response.toMap();
+
+            url_ = QUrl(request["url"].toString());
+
+            headers_ = request["headers"].toMap();
+        }
+        else
+        {
+            url_ = QUrl(response.toString());
+        }
+
+        TagLib::ByteVector bytes = readBlock(length);
+        //if we have datas, let another chance to parse ID3Tags (especially for Dropbox)
+        if(bytes.size() > 0){
+            tDebug( LOGINFO ) << "#### Cloudstream : we have a response !";
+            num_requests_in_error_--;
+        }
+        return bytes;
+      }
+      else {
+        return TagLib::ByteVector();
+      }
   }
 
   QByteArray data = reply->readAll();

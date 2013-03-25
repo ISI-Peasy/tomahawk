@@ -356,7 +356,7 @@ QtScriptResolverHelper::base64Decode( const QByteArray& input )
 
 
 void
-QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction)
+QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction, const QString& javascriptRefreshUrlFunction)
 {
 
     QVariantMap request;
@@ -389,7 +389,7 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
 
 
     CloudStream* stream = new CloudStream(
-        download_url, fileName, size, headers, network);
+        download_url, fileName, fileId, size, headers, network, m_resolver, javascriptRefreshUrlFunction);
     stream->Precache();
     boost::scoped_ptr<TagLib::File> tag;
     if (mime_type == "audio/mpeg") { // && title.endsWith(".mp3")) {
@@ -1299,8 +1299,8 @@ QtScriptResolver::resolverCollections()
     // + data.
 }
 
-void QtScriptResolver::executeJavascript(const QString &js)
+QVariant QtScriptResolver::executeJavascript(const QString &js)
 {
-    m_engine->mainFrame()->evaluateJavaScript( RESOLVER_LEGACY_CODE + js );
+    return m_engine->mainFrame()->evaluateJavaScript( RESOLVER_LEGACY_CODE + js );
 }
 
