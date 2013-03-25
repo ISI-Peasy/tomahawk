@@ -122,6 +122,7 @@ public:
         settings()->setAttribute( QWebSettings::LocalStorageDatabaseEnabled, true );
         settings()->setAttribute( QWebSettings::LocalContentCanAccessFileUrls, true );
         settings()->setAttribute( QWebSettings::LocalContentCanAccessRemoteUrls, true );
+        settings()->setAttribute( QWebSettings::DeveloperExtrasEnabled, true );
 
         // Tomahawk is not a user agent
         m_header = QWebPage::userAgentForUrl( QUrl() ).replace( QString( "%1/%2" )
