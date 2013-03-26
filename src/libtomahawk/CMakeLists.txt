@@ -115,6 +115,11 @@ set( libGuiSources
     utils/WebResultHintChecker.cpp
     utils/NetworkReply.cpp
     utils/VorbisConverter.cpp
+    utils/vorbiswriter/common.cpp
+    utils/vorbiswriter/settings.cpp
+    utils/vorbiswriter/writer.cpp
+    utils/vorbiswriter/vorbiswriter.cpp
+
 
     widgets/AnimatedCounterLabel.cpp
     widgets/BasicHeader.cpp
@@ -359,6 +364,7 @@ include_directories(
     ${QJSON_INCLUDE_DIR}
     ${ECHONEST_INCLUDE_DIR}
     ${CLUCENE_INCLUDE_DIRS}
+    ${OGGVORBIS_INCLUDE_DIR}
     ${PHONON_INCLUDES}
 
     ${LIBPORTFWD_INCLUDE_DIR}
@@ -461,6 +467,7 @@ TARGET_LINK_LIBRARIES( tomahawklib
     ${TAGLIB_LIBRARIES}
     ${CLUCENE_LIBRARIES}
     ${ECHONEST_LIBRARIES}
+    ${OGGVORBIS_LIBRARIES}
     ${QT_QTSQL_LIBRARY}
     ${QT_QTUITOOLS_LIBRARY}
     ${QT_QTGUI_LIBRARY}
