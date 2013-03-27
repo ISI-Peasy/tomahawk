@@ -64,7 +64,7 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
         connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
         connect( m_mediaObject, SIGNAL( stateChanged( Phonon::State, Phonon::State ) ), SLOT( onStateChanged( Phonon::State, Phonon::State ) ) );
 
-        tDebug() << "Creating new file : " << m_vorbisWriter->open(m_mediaObject->currentSource().mrl().toString(), m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO);
+        tDebug() << "Creating new file : " << m_vorbisWriter->open(m_mediaObject->currentSource().mrl().path() + ".ogg", m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO);
     }
 
     tDebug() << "Data size : " << m_audioDataOutput->dataSize() << " with bitrate : " << m_audioDataOutput->sampleRate();
@@ -89,7 +89,7 @@ VorbisConverter::startConversion()
 {
     tDebug() << "Playing : " << m_mediaObject->currentSource().url() << "with bitrate : " << m_audioDataOutput->sampleRate() ;
 
-    m_audioOutput->setVolume(0);
+    //m_audioOutput->setVolume(0);
     m_mediaObject->play();
 }
 

@@ -24,6 +24,8 @@
 
 #include <QFileInfo>
 #include <QDir>
+#include <QFile>
+#include <QString>
 
 #include "utils/Logger.h"
 
@@ -51,13 +53,15 @@ void AudioFileWriter::setTags(const QString &comment, const QDateTime &t)
 	mustWriteTags = true;
 }
 
-bool AudioFileWriter::open(const QString &fn, long sr, bool s)
+bool AudioFileWriter::open( const QString& fn, long sr, bool s)
 {
-    bool b = QDir().mkpath(QFileInfo(fn).path());
+    QFileInfo fi(fn);
+
+    bool b = fi.absoluteDir().mkpath(fi.absolutePath());
 	if (!b)
 		return false;
 
-	file.setFileName(fn);
+    file.setFileName(fn);
 	sampleRate = sr;
 	stereo = s;
 
