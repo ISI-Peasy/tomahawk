@@ -30,6 +30,7 @@
 // update them if they've been changed before close().  for now this is ok, as
 // it never happens.
 
+#include <QFile>
 #include <QByteArray>
 #include <QString>
 #include <cstdlib>
@@ -72,8 +73,9 @@ VorbisWriter::~VorbisWriter() {
 	}
 }
 
-bool VorbisWriter::open(const QString &fn, long sr, bool s) {
-	bool b = AudioFileWriter::open(fn + ".ogg", sr, s);
+bool
+VorbisWriter::open ( const QString &fn, long sr, bool s ) {
+    bool b = AudioFileWriter::open( fn, sr, s );
 
 	if (!b) return false;
 
