@@ -122,10 +122,8 @@ set( libGuiSources
     utils/NetworkReply.cpp
     utils/CloudStream.cpp
     utils/VorbisConverter.cpp
-    utils/vorbiswriter/common.cpp
-    utils/vorbiswriter/settings.cpp
-    utils/vorbiswriter/writer.cpp
-    utils/vorbiswriter/vorbiswriter.cpp
+    utils/vorbiswriter/Writer.cpp
+    utils/vorbiswriter/VorbisWriter.cpp
 
 
     widgets/AnimatedCounterLabel.cpp
