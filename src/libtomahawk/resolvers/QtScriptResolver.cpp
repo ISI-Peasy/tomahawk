@@ -88,6 +88,8 @@
 #include <boost/scoped_ptr.hpp>
 
 #include "qjson/serializer.h"
+
+
 //--- end includes readcloudfile
 
 // FIXME: bloody hack, remove this for 0.3
@@ -358,7 +360,9 @@ QtScriptResolverHelper::base64Decode( const QByteArray& input )
 
 
 void
-QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction, const QString& javascriptRefreshUrlFunction)
+QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS,
+                                      const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction,
+                                      const QString& javascriptRefreshUrlFunction, const bool refreshUrlEachTime)
 {
 
     QVariantMap request;
@@ -367,21 +371,23 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
     QVariantMap m;
     long size = sizeS.toLong();
 
-
+    QString urlString;
 
 
     if(requestJS.type() == QVariant::Map)
     {
         request = requestJS.toMap();
 
-        download_url = QUrl::fromUserInput(request["url"].toString());
+        urlString = request["url"].toString();
 
         headers = request["headers"].toMap();
     }
     else
     {
-        download_url = QUrl::fromUserInput(requestJS.toString());
+        urlString = requestJS.toString();
     }
+
+    download_url.setUrl(urlString);
 
     tDebug( LOGINFO ) << "#### ReadCloudFile : Loading tags of " << fileName << " from " << download_url.toString() << " which have id " << fileId;
 
@@ -390,8 +396,9 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
     m["mimetype"] = mime_type.toUtf8();
 
 
-    CloudStream* stream = new CloudStream(
-        download_url, fileName, fileId, size, headers, network, m_resolver, javascriptRefreshUrlFunction);
+    CloudStream* stream = new CloudStream(download_url, fileName, fileId,
+                                          size, headers, network, m_resolver,
+                                          javascriptRefreshUrlFunction, refreshUrlEachTime);
     stream->Precache();
     boost::scoped_ptr<TagLib::File> tag;
     if (mime_type == "audio/mpeg") { // && title.endsWith(".mp3")) {
@@ -487,7 +494,6 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
 
     m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 }
-
 
 void
 QtScriptResolverHelper::addLocalJSFile( const QString &jsFilePath )

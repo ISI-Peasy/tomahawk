@@ -41,7 +41,7 @@ const static int MAX_ALLOW_ERROR_QUERY = 2;
 CloudStream::CloudStream(
     QUrl& url, const QString& filename, const QString& fileId, const long length,
     QVariantMap& headers, QNetworkAccessManager* network, QtScriptResolver* scriptResolver,
-    const QString & javascriptRefreshUrlFunction)
+    const QString & javascriptRefreshUrlFunction, const bool refreshUrlEachTime)
     : url_(url),
       filename_(filename),
       fileId_(fileId),
@@ -54,7 +54,8 @@ CloudStream::CloudStream(
       num_requests_(0),
       num_requests_in_error_(0),
       scriptResolver_(scriptResolver),
-      javascriptRefreshUrlFunction_(javascriptRefreshUrlFunction) {
+      javascriptRefreshUrlFunction_(javascriptRefreshUrlFunction),
+      refreshUrlEachTime_(refreshUrlEachTime){
     tDebug( LOGINFO ) << "#### Cloudstream : CloudStream object created for " << filename_ << " : " << url_.toString();
 }
 
@@ -114,13 +115,10 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
   const uint end = qMin(cursor_ + length - 1, length_ - 1);
 
   //tDebug( LOGINFO ) << "#### CloudStream : reading block from " << start << " to " << end << " for " << url_.toString();
-
+  tDebug( LOGINFO ) << "#### CloudStream : parsing from " << url_.toString();
+  tDebug( LOGINFO ) << "#### CloudStream : parsing from (encoded) " << url_.toEncoded().constData();
   if (end < start) {
     return TagLib::ByteVector();
-  }
-
-  if(num_requests_in_error_ > MAX_ALLOW_ERROR_QUERY){
-      return TagLib::ByteVector();
   }
 
   if (CheckCache(start, end)) {
@@ -129,9 +127,19 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
     return cached;
   }
 
-  QNetworkRequest request = QNetworkRequest(url_);
-  //setings of specials OAuth (1 or 2) headers
+  if(num_requests_in_error_ > MAX_ALLOW_ERROR_QUERY){
+      return TagLib::ByteVector();
+  }
 
+  if(refreshUrlEachTime_){
+      if(!refreshStreamUrl()){
+          tDebug( LOGINFO ) << "#### CloudStream : cannot refresh streamUrl for " << filename_;
+      }
+  }
+
+  QNetworkRequest request = QNetworkRequest(url_);
+
+  //setings of specials OAuth (1 or 2) headers
   foreach(const QString& headerName, headers_.keys()) {
       request.setRawHeader(headerName.toLocal8Bit(), headers_[headerName].toString().toLocal8Bit());
 
@@ -163,60 +171,74 @@ TagLib::ByteVector CloudStream::readBlock(ulong length) {
   reply->deleteLater();
 
   int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-  tDebug() << "######## CloudStream : HTTP reply : ";
+  tDebug() << "######### CloudStream : HTTP reply : #########";
   tDebug( LOGINFO ) << "#### Cloudstream : HttpStatusCode : " << code;
   foreach (const QNetworkReply::RawHeaderPair& pair, reply->rawHeaderPairs()){
       tDebug( LOGINFO ) << "#### Cloudstream : header reply " << pair;
   }
 
+  QByteArray data = reply->readAll();
+
   if (code != 206) {
       num_requests_in_error_++;
       tDebug( LOGINFO ) << "#### Cloudstream : Error " << code << " retrieving url to tag for " << filename_;
-      if(!javascriptRefreshUrlFunction_.isEmpty()){
-        tDebug( LOGINFO ) << "####### Cloudstream : trying to get a good URL for " << fileId_;
-        QString refreshUrl = QString("resolver.%1( \"%2\" );").arg( javascriptRefreshUrlFunction_ )
-              .arg( fileId_ );
-        tDebug( LOGINFO ) << refreshUrl;
-        QVariant response = scriptResolver_->executeJavascript(refreshUrl);
+      tDebug() << "#### CloudStream : body response : " << data;
 
-
-        if(response.isNull()){
-            tDebug( LOGINFO ) << "####### Cloudstream : response is empty, returning" << response;
-            return TagLib::ByteVector();
-        }
-        QVariantMap request;
-        if(response.type() == QVariant::Map)
-        {
-            request = response.toMap();
-
-            url_ = QUrl(request["url"].toString());
-
-            headers_ = request["headers"].toMap();
-        }
-        else
-        {
-            url_ = QUrl(response.toString());
-        }
-
-        TagLib::ByteVector bytes = readBlock(length);
-        //if we have datas, let another chance to parse ID3Tags (especially for Dropbox)
-        if(bytes.size() > 0){
-            tDebug( LOGINFO ) << "#### Cloudstream : we have a response !";
-            num_requests_in_error_--;
-        }
-        return bytes;
+      if(refreshStreamUrl()) {
+          TagLib::ByteVector bytes = readBlock(length);
+          //if we have datas, let another chance to parse ID3Tags (especially for Dropbox)
+          if(bytes.size() > 0){
+              tDebug( LOGINFO ) << "#### Cloudstream : we have datas response with the refreshUrl !";
+              num_requests_in_error_--;
+          }
+          return bytes;
       }
       else {
-        return TagLib::ByteVector();
+          return TagLib::ByteVector();
       }
   }
 
-  QByteArray data = reply->readAll();
+
   TagLib::ByteVector bytes(data.data(), data.size());
   cursor_ += data.size();
 
   FillCache(start, bytes);
   return bytes;
+}
+
+bool CloudStream::refreshStreamUrl() {
+    if(javascriptRefreshUrlFunction_.isEmpty()){
+        return false;
+    }
+    tDebug( LOGINFO ) << "####### Cloudstream : refreshing streamUrl for " << filename_;
+    QString refreshUrl = QString("resolver.%1( \"%2\" );").arg( javascriptRefreshUrlFunction_ ).arg( fileId_ );
+    tDebug( LOGINFO ) << "####### Cloudstream : refresh request : " << refreshUrl;
+    QVariant response = scriptResolver_->executeJavascript(refreshUrl);
+
+    if(response.isNull()){
+        tDebug( LOGINFO ) << "####### Cloudstream : refreshUrl response is empty, returning";
+        return false;
+    }
+
+    QVariantMap request;
+    QString urlString;
+
+    if(response.type() == QVariant::Map)
+    {
+        request = response.toMap();
+
+        urlString = request["url"].toString();
+
+        headers_ = request["headers"].toMap();
+    }
+    else
+    {
+        urlString = response.toString();
+    }
+
+    url_.setUrl(urlString);
+    tDebug( LOGINFO ) << "####### Cloudstream : streamUrl refreshed for " << filename_;
+    return true;
 }
 
 void CloudStream::writeBlock(const TagLib::ByteVector&) {

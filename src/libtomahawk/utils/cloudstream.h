@@ -38,7 +38,10 @@ class CloudStream : public QObject, public TagLib::IOStream {
                     const QString& fileId,
                     const long length,
                     QVariantMap& headers,
-                    QNetworkAccessManager* network, QtScriptResolver *scriptResolver, const QString& javascriptRefreshUrlFunction);
+                    QNetworkAccessManager* network,
+                    QtScriptResolver *scriptResolver,
+                    const QString& javascriptRefreshUrlFunction,
+                    const bool refreshUrlEachTime);
 
   //Taglib::IOStream;
   virtual TagLib::FileName name() const;
@@ -69,10 +72,13 @@ class CloudStream : public QObject, public TagLib::IOStream {
   // Use educated guess to request the bytes that TagLib will probably want.
   void Precache();
 
+  bool refreshStreamUrl();
+
  private:
   bool CheckCache(int start, int end);
   void FillCache(int start, TagLib::ByteVector data);
   TagLib::ByteVector GetCached(int start, int end);
+
 
  private slots:
   void SSLErrors(const QList<QSslError>& errors);
@@ -85,6 +91,7 @@ class CloudStream : public QObject, public TagLib::IOStream {
   const ulong length_;
   QVariantMap headers_;
   const QString javascriptRefreshUrlFunction_;
+  const bool refreshUrlEachTime_;
 
   int cursor_;
   QNetworkAccessManager* network_;
