@@ -30,6 +30,7 @@
 #include <QString>
 
 class QByteArray;
+class QString;
 
 class AudioFileWriter {
 public:
@@ -44,7 +45,7 @@ public:
 	virtual void setTags(const QString &, const QDateTime &);
 
 	// Note: you're not supposed to reopen after a close
-	virtual bool open(const QString &, long, bool);
+    virtual bool open( const QString&, long, bool);
 	virtual void close();
     virtual bool write(const qint16*, const qint16*, long, bool = false) = 0;
 	QString fileName() const { return file.fileName(); }
