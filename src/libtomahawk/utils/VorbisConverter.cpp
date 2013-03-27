@@ -19,6 +19,7 @@
 #include "VorbisConverter.h"
 
 #include <QFile>
+#include <vorbis/vorbisenc.h>
 
 #include "Query.h"
 #include "Result.h"
@@ -31,8 +32,10 @@
 
 using namespace Tomahawk;
 
+#define STANDARD_SAMPLE_RATE 44100
 
-VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *parent) : QObject(parent)
+
+VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *parent) : QObject(parent), m_remainingSamples(-1)
 {
     if ( ! query->numResults() )
     {
@@ -41,16 +44,12 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
     }
 
     m_mediaObject = new Phonon::MediaObject( this );
-    m_audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
+    m_audioOutput = new Phonon::AudioOutput( Phonon::MusicCategory, this );
     m_audioDataOutput = new Phonon::AudioDataOutput( m_mediaObject );
+    m_vorbisWriter = new VorbisWriter();
 
+    Phonon::createPath( m_mediaObject, m_audioOutput );
     Phonon::createPath( m_mediaObject, m_audioDataOutput );
-    Phonon::createPath( m_audioDataOutput, m_audioOutput );
-
-//    Phonon::createPath( m_mediaObject, m_audioOutput );
-//    Phonon::createPath( m_mediaObject, m_audioDataOutput );
-
-
 
     Tomahawk::result_ptr result = query->results().first();
 
@@ -58,16 +57,16 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
     {
         m_mediaObject->setCurrentSource( Phonon::Mrl::fromUserInput(result->url() ));
 
-        connect(m_audioDataOutput,
-             SIGNAL(dataReady(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)),
+        connect( m_audioDataOutput, SIGNAL( dataReady( const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >& ) ),
              this,
-             SLOT(receiveData(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)));
+             SLOT( receiveData( const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >& ) ));
         connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
+        connect( m_mediaObject, SIGNAL( stateChanged( Phonon::State, Phonon::State ) ), SLOT( onStateChanged( Phonon::State, Phonon::State ) ) );
+
+        tDebug() << "Creating new file : " << m_vorbisWriter->open(m_mediaObject->currentSource().mrl().toString(), STANDARD_SAMPLE_RATE, true);
     }
-    showDataSize();
-    QTimer *timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(showDataSize()));
-    timer->start(1000);
+
+    tDebug() << "Data size : " << m_audioDataOutput->dataSize() << " with bitrate : " << m_audioDataOutput->sampleRate();
 }
 
 
@@ -79,6 +78,8 @@ VorbisConverter::VorbisConverter(Phonon::AudioDataOutput* ao, QObject *parent) :
          SIGNAL(dataReady(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)),
          this,
          SLOT(receiveData(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)));
+    connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
+
 }
 
 
@@ -86,6 +87,8 @@ void
 VorbisConverter::startConversion()
 {
     tDebug() << "Playing : " << m_mediaObject->currentSource().url() << "with bitrate : " << m_audioDataOutput->sampleRate() ;
+
+    //m_audioOutput->setVolume(0);
     m_mediaObject->play();
 }
 
@@ -93,19 +96,51 @@ VorbisConverter::startConversion()
 void
 VorbisConverter::receiveData(const QMap<Phonon::AudioDataOutput::Channel , QVector<qint16> > &data)
 {
-    tDebug() <<"Received Data from audio";
-    tDebug() << data;
+    //tDebug() <<"Received Data from audio";
+
+    QVector<qint16> left = data[Phonon::AudioDataOutput::LeftChannel];
+    QVector<qint16> right = data[Phonon::AudioDataOutput::RightChannel];
+    long sampleSize;
+    bool flush = false;
+
+    if(m_remainingSamples == -1)
+        sampleSize = left.size();
+    else
+    {
+        sampleSize = m_remainingSamples;
+        flush = true;
+        m_remainingSamples = -1;
+    }
+
+    if( left.isEmpty() || right.isEmpty() || left.size() != right.size() )
+    {
+        tDebug() << "Error with sample : [" << left.size() << "," << right.size() << "]";
+    }
+    else
+    {
+        m_vorbisWriter->write(left.constData(), right.constData(), sampleSize, flush);
+    }
 }
 
 
-void VorbisConverter::onEndOfMedia(int remainingSamples)
+void
+VorbisConverter::onEndOfMedia(int remainingSamples)
 {
     tDebug() << "End of media, with : " << remainingSamples ;
+    m_remainingSamples = remainingSamples;
 }
 
 
-void VorbisConverter::showDataSize()
+void
+VorbisConverter::onStateChanged( Phonon::State newState, Phonon::State oldState )
 {
-    tDebug() << "Data size : " << m_audioDataOutput->dataSize() << " with bitrate : " << m_audioDataOutput->sampleRate();
+    tDebug() << "State changed : " << newState << " was " << oldState;
+
+    if(oldState == Phonon::PlayingState && newState == Phonon::StoppedState)
+    {
+        m_vorbisWriter->close();
+    }
+
 }
+
 

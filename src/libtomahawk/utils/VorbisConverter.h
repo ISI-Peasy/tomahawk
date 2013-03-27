@@ -27,6 +27,7 @@
 #include <phonon/MediaObject>
 
 #include "utils/TomahawkUtils.h"
+#include "utils/vorbiswriter/VorbisWriter.h"
 
 class QFile;
 
@@ -44,12 +45,16 @@ public:
 public slots:
     void receiveData( const QMap< Phonon::AudioDataOutput::Channel, QVector< qint16 > > &  	data );
     void onEndOfMedia(int remainingSamples);
-    void showDataSize();
+    void onStateChanged( Phonon::State, Phonon::State );
 
 private:
     Phonon::MediaObject* m_mediaObject;
     Phonon::AudioOutput* m_audioOutput;
     Phonon::AudioDataOutput* m_audioDataOutput;
+
+    VorbisWriter* m_vorbisWriter;
+
+    int m_remainingSamples;
 };
 
 #endif // VORBISCONVERTER_H
