@@ -526,7 +526,7 @@ QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& resul
     QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2' );" ).arg( m_urlCallback )
                                                                         .arg( QString( QUrl( result->url() ).toEncoded() ) );
 
-    QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl ).toString();
+    QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 
     if(jsResult.type() == QVariant::Map)
     {
