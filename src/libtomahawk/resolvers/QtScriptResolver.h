@@ -60,7 +60,7 @@ public:
     Q_INVOKABLE QString md5( const QByteArray& input );
 
     Q_INVOKABLE void addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName, const QString& isAsynchronous = "false" );
-    Q_INVOKABLE void reportStreamUrl( const QString& qid, const QString& streamUrl );
+    Q_INVOKABLE void reportStreamUrl( const QString& qid, const QString& streamUrl, const QVariantMap& headers = QVariantMap() );
 
     Q_INVOKABLE QByteArray base64Encode( const QByteArray& input );
     Q_INVOKABLE QByteArray base64Decode( const QByteArray& input );
@@ -99,7 +99,9 @@ public slots:
     void reportCapabilities( const QVariant& capabilities );
 
 private:
-    void returnStreamUrl( const QString& streamUrl, boost::function< void( QSharedPointer< QIODevice >& ) > callback );
+    void returnStreamUrl( const QString& streamUrl,
+                          boost::function< void( QSharedPointer< QIODevice >& ) > callback ,
+                          const QVariantMap &headers = QVariantMap() );
     QString m_scriptPath, m_urlCallback;
     QHash< QString, boost::function< void( QSharedPointer< QIODevice >& ) > > m_streamCallbacks;
     bool m_urlCallbackIsAsync;
