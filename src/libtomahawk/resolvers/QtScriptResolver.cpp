@@ -58,9 +58,7 @@
 #include <boost/bind.hpp>
 
 //--- includes readcloudFile
-//#include "taghandlers/tag.h"
-# include "utils/cloudstream.h"
-
+#include "utils/CloudStream.h"
 #include <taglib/aifffile.h>
 #include <taglib/asffile.h>
 #include <taglib/attachedpictureframe.h>
@@ -84,12 +82,8 @@
 #include <taglib/tstring.h>
 #include <taglib/vorbisfile.h>
 #include <taglib/wavfile.h>
-
 #include <boost/scoped_ptr.hpp>
-
 #include "qjson/serializer.h"
-
-
 //--- end includes readcloudfile
 
 // FIXME: bloody hack, remove this for 0.3
@@ -360,8 +354,9 @@ QtScriptResolverHelper::base64Decode( const QByteArray& input )
 
 
 void
-QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS,
-                                      const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction,
+QtScriptResolverHelper::readCloudFile(const QString& fileName, const QString& fileId,
+                                      const QString& sizeS, const QString& mime_type,
+                                      const QVariant& requestJS, const QString& javascriptCallbackFunction,
                                       const QString& javascriptRefreshUrlFunction, const bool refreshUrlEachTime)
 {
 
@@ -374,7 +369,7 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
     QString urlString;
 
 
-    if(requestJS.type() == QVariant::Map)
+    if ( requestJS.type() == QVariant::Map )
     {
         request = requestJS.toMap();
 
@@ -387,7 +382,7 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
         urlString = requestJS.toString();
     }
 
-    download_url.setUrl(urlString);
+    download_url.setUrl( urlString );
 
     tDebug( LOGINFO ) << "#### ReadCloudFile : Loading tags of " << fileName << " from " << download_url.toString() << " which have id " << fileId;
 
@@ -396,101 +391,85 @@ QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fi
     m["mimetype"] = mime_type.toUtf8();
 
 
-    CloudStream* stream = new CloudStream(download_url, fileName, fileId,
-                                          size, headers, network, m_resolver,
-                                          javascriptRefreshUrlFunction, refreshUrlEachTime);
+    CloudStream* stream = new CloudStream( download_url, fileName, fileId,
+                                           size, headers, network, m_resolver,
+                                           javascriptRefreshUrlFunction, refreshUrlEachTime );
     stream->Precache();
     boost::scoped_ptr<TagLib::File> tag;
-    if (mime_type == "audio/mpeg") { // && title.endsWith(".mp3")) {
-      tag.reset(new TagLib::MPEG::File(
-          stream,  // Takes ownership.
-          TagLib::ID3v2::FrameFactory::instance(),
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "audio/mp4" ||
-               (mime_type == "audio/mpeg")) { //  && title.endsWith(".m4a"))) {
-      tag.reset(new TagLib::MP4::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "application/ogg" ||
-               mime_type == "audio/ogg") {
-      tag.reset(new TagLib::Ogg::Vorbis::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
+    if ( mime_type == "audio/mpeg" ) // && title.endsWith(".mp3"))
+    {
+        tag.reset(new TagLib::MPEG::File(
+                      stream,  // Takes ownership.
+                      TagLib::ID3v2::FrameFactory::instance(),
+                      TagLib::AudioProperties::Accurate));
     }
-  #ifdef TAGLIB_HAS_OPUS
-    else if (mime_type == "application/opus" ||
-               mime_type == "audio/opus") {
-      tag.reset(new TagLib::Ogg::Opus::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
+    else if ( mime_type == "audio/mp4" || ( mime_type == "audio/mpeg" ) ) //  && title.endsWith(".m4a")))
+    {
+        tag.reset( new TagLib::MP4::File( stream, true, TagLib::AudioProperties::Accurate ) );
     }
-  #endif
-    else if (mime_type == "application/x-flac" ||
-               mime_type == "audio/flac") {
-      tag.reset(new TagLib::FLAC::File(
-          stream,
-          TagLib::ID3v2::FrameFactory::instance(),
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "audio/x-ms-wma") {
-      tag.reset(new TagLib::ASF::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else {
-      tDebug( LOGINFO ) << "Unknown mime type for tagging:" << mime_type;
-      //return m;
+    else if ( mime_type == "application/ogg" || mime_type == "audio/ogg" )
+    {
+        tag.reset(new TagLib::Ogg::Vorbis::File( stream, true, TagLib::AudioProperties::Accurate ) );
+    }
+#ifdef TAGLIB_HAS_OPUS
+    else if ( mime_type == "application/opus" || mime_type == "audio/opus" )
+    {
+        tag.reset(new TagLib::Ogg::Opus::File( stream, true, TagLib::AudioProperties::Accurate ) );
+    }
+#endif
+    else if ( mime_type == "application/x-flac" || mime_type == "audio/flac" )
+    {
+        tag.reset(new TagLib::FLAC::File( stream, TagLib::ID3v2::FrameFactory::instance(), true,
+                                          TagLib::AudioProperties::Accurate ) );
+    }
+    else if ( mime_type == "audio/x-ms-wma" )
+    {
+        tag.reset( new TagLib::ASF::File( stream, true, TagLib::AudioProperties::Accurate ) );
+    }
+    else
+    {
+        tDebug( LOGINFO ) << "Unknown mime type for tagging:" << mime_type;
     }
 
     if (stream->num_requests() > 2) {
-      // Warn if pre-caching failed.
-     tDebug( LOGINFO ) << "Total requests for file:" << fileName
-                    << stream->num_requests()
-                    << stream->cached_bytes();
+        // Warn if pre-caching failed.
+        tDebug( LOGINFO ) << "Total requests for file:" << fileName
+                          << " : " << stream->num_requests() << " with "
+                          << stream->cached_bytes() << " bytes cached";
     }
 
     //construction of the tag's map
-    if (tag->tag() && !tag->tag()->isEmpty()) {
+    if ( tag->tag() && !tag->tag()->isEmpty() )
+    {
+        m["track"] = tag->tag()->title().toCString( true );
+        m["artist"] = tag->tag()->artist().toCString( true );
+        m["album"] = tag->tag()->album().toCString( true );
+        m["size"] = QString::number( size );
 
-       m["track"] = tag->tag()->title().toCString(true);
-       m["artist"] = tag->tag()->artist().toCString(true);
-       m["album"] = tag->tag()->album().toCString(true);
-       m["size"] = QString::number(size);
+        if ( tag->tag()->track() != 0 )
+        {
+            m["albumpos"] = tag->tag()->track();
+        }
+        if ( tag->tag()->year() != 0 )
+        {
+            m["year"] = tag->tag()->year();
+        }
 
-      if (tag->tag()->track() != 0) {
-          m["albumpos"] = tag->tag()->track();
-      }
-      if (tag->tag()->year() != 0) {
-          m["year"] = tag->tag()->year();
-      }
-
-      if (tag->audioProperties()) {
-          m["duration"] = tag->audioProperties()->length();
-          m["bitrate"] = tag->audioProperties()->bitrate();
-      }
-/*      if (tag->tag()->albumArtist()) {
-        m["albumartist"]  = tag->tag()->albumArtist();
-      }
-      if (tag->tag()->composer()) {
-        m["composer"]     = tag->tag()->composer();
-      }
-      if (tag->tag()->discNumber() != 0) {
-        m["discnumber"]   = tag->tag()->discNumber();
-      }
-*/
+        if ( tag->audioProperties() )
+        {
+            m["duration"] = tag->audioProperties()->length();
+            m["bitrate"] = tag->audioProperties()->bitrate();
+        }
     }
 
     QJson::Serializer serializer;
 
-    QByteArray json = serializer.serialize(m);
+    QByteArray json = serializer.serialize( m );
 
     tDebug() << "#### ReadCloudFile : Sending tags to js : " << json;
 
     QString getUrl = QString( "Tomahawk.resolver.instance.%1( %2 );" ).arg( javascriptCallbackFunction )
-                                                                        .arg( QString(json) );
+            .arg( QString(json) );
 
     m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 }

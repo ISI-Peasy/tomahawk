@@ -115,7 +115,7 @@ set( libGuiSources
     utils/SharedTimeLine.cpp
     utils/WebResultHintChecker.cpp
     utils/NetworkReply.cpp
-    utils/cloudstream.cpp
+    utils/CloudStream.cpp
 
     widgets/AnimatedCounterLabel.cpp
     widgets/BasicHeader.cpp
