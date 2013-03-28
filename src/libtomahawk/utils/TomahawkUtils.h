@@ -113,7 +113,6 @@ namespace TomahawkUtils
         DropTopSongs,
         LastfmIcon,
         SpotifyIcon,
-        DropboxIcon,
         SoundcloudIcon,
         AccountNone,
         Starred,
@@ -121,6 +120,7 @@ namespace TomahawkUtils
         StarHovered,
         SipPluginOnline,
         SipPluginOffline,
+        ResolverBundle,
         Invalid
     };
 
@@ -194,7 +194,7 @@ namespace TomahawkUtils
     DLLEXPORT bool isLocalResult( const QString& url );
 
     DLLEXPORT bool verifyFile( const QString& filePath, const QString& signature );
-    DLLEXPORT QString extractScriptPayload( const QString& filename, const QString& resolverId );
+    DLLEXPORT QString extractScriptPayload( const QString& filename, const QString& resolverId, const QString& dirName = "atticaresolvers" );
     DLLEXPORT bool unzipFileInFolder( const QString& zipFileName, const QDir& folder );
 
     // Extracting may be asynchronous, pass in a receiver object with the following slots:

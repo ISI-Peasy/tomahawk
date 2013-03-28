@@ -235,9 +235,9 @@ Tomahawk.syncRequest = function(url, extraHeaders)
     }
 	
 	xmlHttpRequest.send(null);
-	if (xmlHttpRequest.status == 200){
+	if (xmlHttpRequest.status == 200) {
 		return xmlHttpRequest.responseText;
-	}else if (xmlHttpRequest.readyState === 4) {
+	} else if (xmlHttpRequest.readyState === 4) {
 		Tomahawk.log("Failed to do Get request: to: " + url);
 		Tomahawk.log("Status Code was: " + xmlHttpRequest.status);
 	}
@@ -449,6 +449,11 @@ Tomahawk.sha256=function(s){
 
 };
 
+/*
+ * Bind the function to be executed in the scope of the object oThis.
+ * Any copyright is dedicated to the Public Domain.
+ * Source : http://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind#Compatibility
+ */
 if (!Function.prototype.bind) {
   Function.prototype.bind = function (oThis) {
     if (typeof this !== "function") {
