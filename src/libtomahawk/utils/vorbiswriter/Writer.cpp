@@ -26,6 +26,7 @@
 #include <QDir>
 #include <QFile>
 #include <QString>
+#include <QMap>
 
 #include "utils/Logger.h"
 
@@ -35,7 +36,8 @@ AudioFileWriter::AudioFileWriter() :
 	sampleRate(0),
 	stereo(false),
 	samplesWritten(0),
-	mustWriteTags(true)
+    mustWriteTags(true),
+    m_tagComment(QMap<QString, QString>())
 {
 }
 
@@ -46,11 +48,9 @@ AudioFileWriter::~AudioFileWriter() {
 	}
 }
 
-void AudioFileWriter::setTags(const QString &comment, const QDateTime &t)
+void AudioFileWriter::addTag(const QString &tagName, const QString &tagValue)
 {
-	tagComment = comment;
-	tagTime = t;
-	mustWriteTags = true;
+    m_tagComment[tagName] = tagValue;
 }
 
 bool AudioFileWriter::open( const QString& fn, long sr, bool s)
