@@ -44,7 +44,6 @@ CloudStream::CloudStream( QUrl& url,
                           const QString& fileId,
                           const long length,
                           QVariantMap& headers,
-                          QNetworkAccessManager* network,
                           QtScriptResolver* scriptResolver,
                           const QString & javascriptRefreshUrlFunction,
                           const bool refreshUrlEachTime )
@@ -55,7 +54,6 @@ CloudStream::CloudStream( QUrl& url,
     , m_length( length )
     , m_headers( headers )
     , m_cursor( 0 )
-    , m_network( network )
     , m_cache( length )
     , m_num_requests( 0 )
     , m_num_requests_in_error( 0 )
@@ -63,6 +61,7 @@ CloudStream::CloudStream( QUrl& url,
     , m_javascriptRefreshUrlFunction( javascriptRefreshUrlFunction )
     , m_refreshUrlEachTime( refreshUrlEachTime )
 {
+    m_network = TomahawkUtils::nam();
     tDebug( LOGINFO ) << "#### Cloudstream : CloudStream object created for " << m_filename << " : "
                       << m_url.toString();
 }

@@ -98,7 +98,6 @@ QtScriptResolverHelper::QtScriptResolverHelper( const QString& scriptPath, QtScr
 {
     m_scriptPath = scriptPath;
     m_resolver = parent;
-    network = new QNetworkAccessManager(this);
 }
 
 
@@ -392,7 +391,7 @@ QtScriptResolverHelper::readCloudFile(const QString& fileName, const QString& fi
 
 
     CloudStream* stream = new CloudStream( download_url, fileName, fileId,
-                                           size, headers, network, m_resolver,
+                                           size, headers, m_resolver,
                                            javascriptRefreshUrlFunction, refreshUrlEachTime );
     stream->Precache();
     boost::scoped_ptr<TagLib::File> tag;
