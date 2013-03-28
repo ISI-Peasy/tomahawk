@@ -513,31 +513,6 @@ void
 QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& result,
                                                boost::function< void( QSharedPointer< QIODevice >& ) > callback )
 {
-    QString urlStr;
-    QVariantMap request;
-    QNetworkRequest req;
-    QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2' );" ).arg( m_urlCallback )
-                                                                        .arg( QString( QUrl( result->url() ).toEncoded() ) );
-
-    QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
-
-    if(jsResult.type() == QVariant::Map)
-    {
-        request = jsResult.toMap();
-
-        urlStr = request["url"].toString();
-
-        QVariantMap headers = request["headers"].toMap();
-        foreach(const QString& headerName, headers.keys())
-        {
-            req.setRawHeader(headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit());
-        }
-    }
-    else
-    {
-        urlStr = jsResult.toString();
-    }
-
     //can be sync or async
     QString origResultUrl = QString( QUrl( result->url() ).toEncoded() );
 
@@ -556,7 +531,29 @@ QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& resul
         QString getUrl = QString( "Tomahawk.resolver.instance.%1( '%2' );" ).arg( m_urlCallback )
                                                                             .arg( origResultUrl );
 
-        QString urlStr = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl ).toString();
+        QString urlStr;
+        QNetworkRequest req;
+        QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
+
+        if ( jsResult.type() == QVariant::String )
+        {
+            urlStr = jsResult.toString();
+        }
+        else if ( jsResult.type() == QVariant::Map )
+        {
+            QVariantMap request = jsResult.toMap();
+
+            urlStr = request["url"].toString();
+
+            QVariantMap headers = request["headers"].toMap();
+            foreach ( const QString& headerName, headers.keys() )
+            {
+                req.setRawHeader( headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit() );
+            }
+        }
+
+        QUrl url = QUrl::fromEncoded( urlStr.toUtf8() );
+        req.setUrl( url );
 
         returnStreamUrl( urlStr, callback );
     }
