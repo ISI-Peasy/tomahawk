@@ -111,7 +111,6 @@ private:
 #ifdef QCA2_FOUND
     QCA::Initializer m_qcaInit;
 #endif
-    QNetworkAccessManager* network;
 };
 
 class DLLEXPORT ScriptEngine : public QWebPage

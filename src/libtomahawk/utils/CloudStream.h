@@ -39,7 +39,6 @@ public:
                  const QString& fileId,
                  const long length,
                  QVariantMap& headers,
-                 QNetworkAccessManager* network,
                  QtScriptResolver *scriptResolver,
                  const QString& javascriptRefreshUrlFunction,
                  const bool refreshUrlEachTime );
