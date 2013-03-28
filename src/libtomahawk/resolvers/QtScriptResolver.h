@@ -79,9 +79,6 @@ public:
     void customIODeviceFactory( const Tomahawk::result_ptr& result,
                                 boost::function< void( QSharedPointer< QIODevice >& ) > callback ); // async
 
-    void customIODeviceFactory( const Tomahawk::result_ptr& result,
-                                boost::function< void( QSharedPointer< QIODevice >& ) > callback ); // async
-
 public slots:
     QByteArray readRaw( const QString& fileName );
     QString readBase64( const QString& fileName );
