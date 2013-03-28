@@ -21,6 +21,8 @@
 #include <QFile>
 #include <vorbis/vorbisenc.h>
 
+#include "Album.h"
+#include "Artist.h"
 #include "Query.h"
 #include "Result.h"
 #include "Typedefs.h"
@@ -29,6 +31,7 @@
 
 #include "utils/Logger.h"
 #include "utils/TomahawkUtils.h"
+#include "Typedefs.h"
 
 using namespace Tomahawk;
 
@@ -62,6 +65,10 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
              SLOT( receiveData( const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >& ) ));
         connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
         connect( m_mediaObject, SIGNAL( stateChanged( Phonon::State, Phonon::State ) ), SLOT( onStateChanged( Phonon::State, Phonon::State ) ) );
+
+        m_vorbisWriter->addTag("ARTIST", result->artist()->name());
+        m_vorbisWriter->addTag("ALBUM", result->album()->name());
+        m_vorbisWriter->addTag("TITLE", result->track());
 
         tDebug() << "Creating new file : " << m_vorbisWriter->open(m_mediaObject->currentSource().mrl().path() + ".ogg", m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO);
     }
