@@ -74,12 +74,10 @@ VorbisWriter::~VorbisWriter() {
 }
 
 bool
-VorbisWriter::open ( const QString &fn, long sr, bool s ) {
+VorbisWriter::open ( const QString &fn, long sr, bool s, int quality ) {
     bool b = AudioFileWriter::open( fn, sr, s );
 
 	if (!b) return false;
-
-    int quality = 10;//settings.audioOggQuality();
 
 	pd = new VorbisWriterPrivateData;
 	vorbis_info_init(&pd->vi);
@@ -98,9 +96,11 @@ VorbisWriter::open ( const QString &fn, long sr, bool s ) {
 	// incorrectly takes a char * instead of a const char *.  to prevent
 	// compiler warnings we use const_cast<>(), since it's known that
 	// libvorbis does not change the arguments.
-	vorbis_comment_add_tag(&pd->vc, const_cast<char *>("COMMENT"), const_cast<char *>(tagComment.toUtf8().constData()));
-	vorbis_comment_add_tag(&pd->vc, const_cast<char *>("DATE"), const_cast<char *>(tagTime.toString("yyyy-MM-dd hh:mm").toAscii().constData()));
-	vorbis_comment_add_tag(&pd->vc, const_cast<char *>("GENRE"), const_cast<char *>("Speech (Skype Call)"));
+    foreach ( const QString tagName, m_tagComment.keys() )
+    {
+        vorbis_comment_add_tag( &pd->vc, const_cast<char *>( tagName.toLocal8Bit().constData() ),
+                                const_cast<char *>( m_tagComment[tagName].toLocal8Bit().constData() ) );
+    }
 
 	vorbis_analysis_init(&pd->vd, &pd->vi);
 	vorbis_block_init(&pd->vd, &pd->vb);

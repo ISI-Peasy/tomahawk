@@ -36,7 +36,7 @@ public:
     VorbisWriter();
     virtual ~VorbisWriter();
 
-    virtual bool open( const QString& , long, bool);
+    virtual bool open(const QString& , long, bool, int quality = 10);
     virtual void close();
     virtual bool write(const qint16*, const qint16*, long, bool = false);
 

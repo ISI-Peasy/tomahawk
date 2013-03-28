@@ -28,6 +28,7 @@
 #include <QFile>
 #include <QDateTime>
 #include <QString>
+#include <QMap>
 
 class QByteArray;
 class QString;
@@ -42,7 +43,7 @@ public:
 	// disk at arbitrary times, but close() guarantees they are written.
 	// however, if a writer doesn't support tags at all, they are silently
 	// ignored.
-	virtual void setTags(const QString &, const QDateTime &);
+    virtual void addTag(const QString &, const QString &);
 
 	// Note: you're not supposed to reopen after a close
     virtual bool open( const QString&, long, bool);
@@ -55,7 +56,7 @@ protected:
 	long sampleRate;
 	bool stereo;
 	qint64 samplesWritten;
-	QString tagComment;
+    QMap<QString,QString> m_tagComment;
 	QDateTime tagTime;
 	bool mustWriteTags;
 
