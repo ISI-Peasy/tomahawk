@@ -326,6 +326,11 @@ SourcesModel::appendGroups()
                                                 boost::bind( &ViewManager::newReleasesWidget, ViewManager::instance() ) );
     newReleases->setSortValue( 5 );
 
+    GenericPageItem* sessionAlbum = new GenericPageItem( this, browse, tr( "Tracks History" ), ImageRegistry::instance()->icon( RESPATH "images/new-releases.svg" ),
+                                                boost::bind( &ViewManager::showSessionAlbumPage, ViewManager::instance() ),
+                                                boost::bind( &ViewManager::sessionAlbumWidget, ViewManager::instance() ) );
+    sessionAlbum->setSortValue( 6 );
+
     m_collectionsGroup = new GroupItem( this, m_rootItem, tr( "Friends" ), 4 );
 
     m_cloudGroup = new GroupItem( this, m_rootItem, tr( "Cloud" ), 5 );

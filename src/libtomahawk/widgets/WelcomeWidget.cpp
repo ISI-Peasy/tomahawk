@@ -71,7 +71,7 @@ WelcomeWidget::WelcomeWidget( QWidget* parent )
     ui->playlistWidget->setModel( model );
     ui->playlistWidget->overlay()->resize( 380, 86 );
     ui->playlistWidget->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
-    updatePlaylists();
+   // updatePlaylists();
 
     m_tracksModel = new RecentlyPlayedModel( ui->tracksView );
     ui->tracksView->proxyModel()->setStyle( PlayableProxyModel::ShortWithAvatars );

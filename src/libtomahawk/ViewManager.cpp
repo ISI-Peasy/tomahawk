@@ -50,6 +50,7 @@
 #include "widgets/infowidgets/TrackInfoWidget.h"
 #include "widgets/NewPlaylistWidget.h"
 #include "widgets/AnimatedSplitter.h"
+#include "widgets/SessionAlbumWidget.h"
 
 #include "utils/Logger.h"
 
@@ -75,6 +76,7 @@ ViewManager::ViewManager( QObject* parent )
     : QObject( parent )
     , m_widget( new QWidget() )
     , m_welcomeWidget( new WelcomeWidget() )
+    , m_sessionAlbumWidget( new SessionAlbumWidget() )
     , m_whatsHotWidget( 0 )
     , m_newReleasesWidget( new NewReleasesWidget() )
     , m_recentPlaysWidget( 0 )
@@ -112,6 +114,7 @@ ViewManager::ViewManager( QObject* parent )
 
     connect( this, SIGNAL( tomahawkLoaded() ), m_newReleasesWidget, SLOT( fetchData() ) );
     connect( this, SIGNAL( tomahawkLoaded() ), m_welcomeWidget, SLOT( loadData() ) );
+    connect( this, SIGNAL( tomahawkLoaded() ), m_sessionAlbumWidget, SLOT( loadData() ) );
 
 /*    connect( m_infobar, SIGNAL( flatMode() ), SLOT( setTableMode() ) );
     connect( m_infobar, SIGNAL( artistMode() ), SLOT( setTreeMode() ) );
@@ -124,6 +127,7 @@ ViewManager::~ViewManager()
     delete m_whatsHotWidget;
     delete m_newReleasesWidget;
     delete m_welcomeWidget;
+    delete m_sessionAlbumWidget;
     delete m_recentPlaysWidget;
     delete m_contextWidget;
     delete m_widget;
@@ -370,6 +374,11 @@ ViewManager::showWelcomePage()
     return show( m_welcomeWidget );
 }
 
+Tomahawk::ViewPage*
+ViewManager::showSessionAlbumPage()
+{
+    return show( m_sessionAlbumWidget );
+}
 
 Tomahawk::ViewPage*
 ViewManager::showWhatsHotPage()
@@ -793,6 +802,11 @@ ViewManager::newReleasesWidget() const
     return m_newReleasesWidget;
 }
 
+Tomahawk::ViewPage*
+ViewManager::sessionAlbumWidget() const
+{
+    return m_sessionAlbumWidget;
+}
 
 Tomahawk::ViewPage*
 ViewManager::recentPlaysWidget() const
