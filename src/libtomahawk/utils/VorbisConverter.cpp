@@ -49,7 +49,6 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
     m_audioDataOutput = new Phonon::AudioDataOutput( m_mediaObject );
     m_vorbisWriter = new VorbisWriter();
 
-    Phonon::createPath( m_mediaObject, m_audioOutput );
     Phonon::createPath( m_mediaObject, m_audioDataOutput );
 
     Tomahawk::result_ptr result = query->results().first();
