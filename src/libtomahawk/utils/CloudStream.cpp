@@ -23,9 +23,35 @@
 #include <QNetworkRequest>
 #include <QPair>
 #include <QStringList>
+#include <QVariantMap>
 
 #include <taglib/id3v2framefactory.h>
 #include <taglib/mpegfile.h>
+#include <taglib/aifffile.h>
+#include <taglib/asffile.h>
+#include <taglib/attachedpictureframe.h>
+#include <taglib/commentsframe.h>
+#include <taglib/fileref.h>
+#include <taglib/flacfile.h>
+#include <taglib/id3v2tag.h>
+#include <taglib/mp4file.h>
+#include <taglib/mp4tag.h>
+#include <taglib/mpcfile.h>
+#include <taglib/mpegfile.h>
+#include <taglib/oggfile.h>
+#ifdef TAGLIB_HAS_OPUS
+#include <taglib/opusfile.h>
+#endif
+#include <taglib/oggflacfile.h>
+#include <taglib/speexfile.h>
+#include <taglib/tag.h>
+#include <taglib/textidentificationframe.h>
+#include <taglib/trueaudiofile.h>
+#include <taglib/tstring.h>
+#include <taglib/vorbisfile.h>
+#include <taglib/wavfile.h>
+#include <boost/scoped_ptr.hpp>
+#include "qjson/serializer.h"
 
 #include "utils/Logger.h"
 
@@ -43,9 +69,11 @@ CloudStream::CloudStream( QUrl& url,
                           const QString& filename,
                           const QString& fileId,
                           const long length,
+                          const QString& mimeType,
                           QVariantMap& headers,
                           QtScriptResolver* scriptResolver,
                           const QString & javascriptRefreshUrlFunction,
+                          const QString& javascriptCallbackFunction,
                           const bool refreshUrlEachTime )
     : m_url( url )
     , m_filename( filename )
@@ -59,11 +87,16 @@ CloudStream::CloudStream( QUrl& url,
     , m_num_requests_in_error( 0 )
     , m_scriptResolver( scriptResolver )
     , m_javascriptRefreshUrlFunction( javascriptRefreshUrlFunction )
+    , m_javascriptCallbackFunction( javascriptCallbackFunction )
     , m_refreshUrlEachTime( refreshUrlEachTime )
+    , m_currentBlocklength( 0 )
+    , m_cacheState( CloudStream::BeginningCache )
+    , m_tags( QVariantMap() )
 {
     m_network = TomahawkUtils::nam();
-    tDebug( LOGINFO ) << "#### Cloudstream : CloudStream object created for " << m_filename << " : "
-                      << m_url.toString();
+    connect( this, SIGNAL( cacheReadFinished() ), this, SLOT( precache() ) );
+    m_tags["fileId"] = fileId;
+    m_tags["mimetype"] = mimeType;
 }
 
 TagLib::FileName
@@ -105,7 +138,7 @@ CloudStream::GetCached( int start, int end )
 }
 
 void
-CloudStream::Precache()
+CloudStream::precache()
 {
     // For reading the tags of an MP3, TagLib tends to request:
     // 1. The first 1024 bytes
@@ -120,23 +153,112 @@ CloudStream::Precache()
     // to support multipart byte ranges yet so we have to make do with two
     // requests.
     tDebug( LOGINFO ) << "#### CloudStream : Precaching from :" << m_filename;
-    seek( 0, TagLib::IOStream::Beginning );
-    readBlock( kTaglibPrefixCacheBytes );
-    seek( kTaglibSuffixCacheBytes, TagLib::IOStream::End );
-    readBlock( kTaglibSuffixCacheBytes );
-    clear();
-    tDebug( LOGINFO ) << "#### CloudStream : Precaching end for :" << m_filename;
+
+    switch( m_cacheState )
+    {
+        case CloudStream::BeginningCache :
+        {
+            seek( 0, TagLib::IOStream::Beginning );
+            readBlock( kTaglibPrefixCacheBytes );
+            m_cacheState = CloudStream::EndCache;
+            break;
+        }
+
+        case CloudStream::EndCache :
+        {
+            seek( kTaglibSuffixCacheBytes, TagLib::IOStream::End );
+            readBlock( kTaglibSuffixCacheBytes );
+            m_cacheState = CloudStream::EndCacheDone;
+            break;
+        }
+
+        case CloudStream::EndCacheDone :
+        {
+            clear();
+            // construct the tag map
+            QString mimeType = m_tags["mimetype"].toString();
+            boost::scoped_ptr<TagLib::File> tag;
+
+            if ( mimeType == "audio/mpeg" ) // && title.endsWith(".mp3"))
+            {
+                tag.reset(new TagLib::MPEG::File(
+                              this,  // Takes ownership.
+                              TagLib::ID3v2::FrameFactory::instance(),
+                              TagLib::AudioProperties::Accurate));
+            }
+            else if ( mimeType == "audio/mp4" || ( mimeType == "audio/mpeg" ) ) //  && title.endsWith(".m4a")))
+            {
+                tag.reset( new TagLib::MP4::File( this, true, TagLib::AudioProperties::Accurate ) );
+            }
+            else if ( mimeType == "application/ogg" || mimeType == "audio/ogg" )
+            {
+                tag.reset( new TagLib::Ogg::Vorbis::File( this, true, TagLib::AudioProperties::Accurate ) );
+            }
+        #ifdef TAGLIB_HAS_OPUS
+            else if ( mimeType == "application/opus" || mimeType == "audio/opus" )
+            {
+                tag.reset( new TagLib::Ogg::Opus::File( this, true, TagLib::AudioProperties::Accurate ) );
+            }
+        #endif
+            else if ( mimeType == "application/x-flac" || mimeType == "audio/flac" )
+            {
+                tag.reset( new TagLib::FLAC::File( this, TagLib::ID3v2::FrameFactory::instance(), true,
+                                                  TagLib::AudioProperties::Accurate ) );
+            }
+            else if ( mimeType == "audio/x-ms-wma" )
+            {
+                tag.reset( new TagLib::ASF::File( this, true, TagLib::AudioProperties::Accurate ) );
+            }
+            else
+            {
+                tDebug( LOGINFO ) << "Unknown mime type for tagging:" << mimeType;
+            }
+
+            if (this->num_requests() > 2) {
+                // Warn if pre-caching failed.
+                tDebug( LOGINFO ) << "Total requests for file:" << m_tags["fileId"]
+                                  << " : " << this->num_requests() << " with "
+                                  << this->cached_bytes() << " bytes cached";
+            }
+
+            //construction of the tag's map
+            if ( tag->tag() && !tag->tag()->isEmpty() )
+            {
+                m_tags["track"] = tag->tag()->title().toCString( true );
+                m_tags["artist"] = tag->tag()->artist().toCString( true );
+                m_tags["album"] = tag->tag()->album().toCString( true );
+                m_tags["size"] = QString::number( m_length );
+
+                if ( tag->tag()->track() != 0 )
+                {
+                    m_tags["albumpos"] = tag->tag()->track();
+                }
+                if ( tag->tag()->year() != 0 )
+                {
+                    m_tags["year"] = tag->tag()->year();
+                }
+
+                if ( tag->audioProperties() )
+                {
+                    m_tags["duration"] = tag->audioProperties()->length();
+                    m_tags["bitrate"] = tag->audioProperties()->bitrate();
+                }
+            }
+            emit tagsReady( m_tags, m_javascriptCallbackFunction );
+            break;
+        }
+    }
+
 }
 
 TagLib::ByteVector
 CloudStream::readBlock( ulong length )
 {
-
     const uint start = m_cursor;
     const uint end = qMin( m_cursor + length - 1, m_length - 1 );
 
-    tDebug( LOGINFO ) << "#### CloudStream : parsing from " << m_url.toString();
-    tDebug( LOGINFO ) << "#### CloudStream : parsing from (encoded) " << m_url.toEncoded().constData();
+    //tDebug( LOGINFO ) << "#### CloudStream : parsing from " << m_url.toString();
+    //tDebug( LOGINFO ) << "#### CloudStream : parsing from (encoded) " << m_url.toEncoded().constData();
     if ( end < start )
     {
         return TagLib::ByteVector();
@@ -151,6 +273,7 @@ CloudStream::readBlock( ulong length )
 
     if ( m_num_requests_in_error > MAX_ALLOW_ERROR_QUERY )
     {
+        //precache();
         return TagLib::ByteVector();
     }
 
@@ -180,31 +303,34 @@ CloudStream::readBlock( ulong length )
         request.setRawHeader( "Accept-Encoding", "identity" );
     }
 
-    //tDebug() << request.rawHeader("Authorization");
     tDebug() << "######## CloudStream : HTTP request : ";
-    foreach ( const QByteArray& header, request.rawHeaderList() )
-    {
-        tDebug() << "#### CloudStream : header request : " << header << " = " << request.rawHeader(header);
-    }
+    tDebug() << "#### CloudStream : url : "  << request.url();
 
-    QNetworkReply* reply = m_network->get( request );
-    connect( reply, SIGNAL( sslErrors( QList<QSslError> ) ), SLOT( SSLErrors( QList<QSslError> ) ) );
+    m_currentBlocklength = length;
+    m_currentStart = start;
+
+    m_reply = m_network->get( request );
+
+    connect( m_reply, SIGNAL( sslErrors( QList<QSslError> ) ), SLOT( SSLErrors( QList<QSslError> ) ) );
+    connect( m_reply, SIGNAL( finished() ), this, SLOT( onRequestFinished() ) );
+
     ++m_num_requests;
+    return TagLib::ByteVector();
+}
 
-    QEventLoop loop;
-    QObject::connect( reply, SIGNAL( finished() ), &loop, SLOT( quit() ) );
-    loop.exec();
-    reply->deleteLater();
 
-    int code = reply->attribute( QNetworkRequest::HttpStatusCodeAttribute ).toInt();
+void
+CloudStream::onRequestFinished()
+{
+    m_reply->deleteLater();
+
+    int code = m_reply->attribute( QNetworkRequest::HttpStatusCodeAttribute ).toInt();
+
     tDebug() << "######### CloudStream : HTTP reply : #########";
     tDebug( LOGINFO ) << "#### Cloudstream : HttpStatusCode : " << code;
-    foreach ( const QNetworkReply::RawHeaderPair& pair, reply->rawHeaderPairs() )
-    {
-        tDebug( LOGINFO ) << "#### Cloudstream : header reply " << pair;
-    }
+    tDebug( LOGINFO ) << "#### Cloudstream : URL : " << m_reply->url();
 
-    QByteArray data = reply->readAll();
+    QByteArray data = m_reply->readAll();
 
     if ( code != 206 )
     {
@@ -214,17 +340,14 @@ CloudStream::readBlock( ulong length )
 
         if ( refreshStreamUrl() )
         {
-            TagLib::ByteVector bytes = readBlock( length );
-            //if we have datas, let another chance to parse ID3Tags (especially for Dropbox)
-            if( bytes.size() > 0 ){
-                tDebug( LOGINFO ) << "#### Cloudstream : we have datas response with the refreshUrl !";
-                m_num_requests_in_error--;
-            }
-            return bytes;
+            readBlock (m_currentBlocklength);
+            return;
         }
         else
         {
-            return TagLib::ByteVector();
+            //return TagLib::ByteVector();
+            precache();
+            return ;
         }
     }
 
@@ -232,9 +355,10 @@ CloudStream::readBlock( ulong length )
     TagLib::ByteVector bytes( data.data(), data.size() );
     m_cursor += data.size();
 
-    FillCache( start, bytes );
-    return bytes;
+    FillCache( m_currentStart, bytes );
+    precache();
 }
+
 
 bool
 CloudStream::refreshStreamUrl()
@@ -246,7 +370,6 @@ CloudStream::refreshStreamUrl()
     tDebug( LOGINFO ) << "####### Cloudstream : refreshing streamUrl for " << m_filename;
     QString refreshUrl = QString( "resolver.%1( \"%2\" );" ).arg( m_javascriptRefreshUrlFunction )
             .arg( m_fileId );
-    tDebug( LOGINFO ) << "####### Cloudstream : refresh request : " << refreshUrl;
     QVariant response = m_scriptResolver->executeJavascript( refreshUrl );
 
     if ( response.isNull() )
@@ -272,7 +395,6 @@ CloudStream::refreshStreamUrl()
     }
 
     m_url.setUrl( urlString );
-    tDebug( LOGINFO ) << "####### Cloudstream : streamUrl refreshed for " << m_filename;
     return true;
 }
 

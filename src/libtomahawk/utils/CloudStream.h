@@ -22,6 +22,7 @@
 #include <QList>
 #include <QSslError>
 #include <QUrl>
+#include <QMap>;
 
 
 #include <google/sparsetable>
@@ -29,6 +30,7 @@
 
 class QNetworkAccessManager;
 class QtScriptResolver;
+class QNetworkReply;
 
 class CloudStream : public QObject, public TagLib::IOStream
 {
@@ -38,9 +40,11 @@ public:
                  const QString& filename,
                  const QString& fileId,
                  const long length,
+                 const QString& mimeType,
                  QVariantMap& headers,
                  QtScriptResolver *scriptResolver,
                  const QString& javascriptRefreshUrlFunction,
+                 const QString& javascriptCallbackFunction,
                  const bool refreshUrlEachTime );
 
     //Taglib::IOStream;
@@ -72,19 +76,31 @@ public:
         return m_num_requests_in_error;
     }
 
-    // Use educated guess to request the bytes that TagLib will probably want.
-    void Precache();
-
     bool refreshStreamUrl();
+
+public slots:
+    // Use educated guess to request the bytes that TagLib will probably want.
+    void precache();
+
+signals:
+    void tagsReady( QVariantMap &, const QString & );
+    void cacheReadFinished();
 
 private:
     bool CheckCache( int start, int end );
     void FillCache( int start, TagLib::ByteVector data );
     TagLib::ByteVector GetCached( int start, int end );
 
+    enum ReadingCacheState
+    {
+        BeginningCache,
+        EndCache,
+        EndCacheDone
+    };
 
 private slots:
     void SSLErrors( const QList<QSslError>& errors );
+    void onRequestFinished();
 
 private:
     QUrl m_url;
@@ -95,9 +111,15 @@ private:
     QVariantMap m_headers;
     const QString m_javascriptRefreshUrlFunction;
     const bool m_refreshUrlEachTime;
+    ulong m_currentBlocklength;
+    ReadingCacheState m_cacheState;
+    QVariantMap m_tags;
+    uint m_currentStart;
+    const QString m_javascriptCallbackFunction;
 
     int m_cursor;
     QNetworkAccessManager* m_network;
+    QNetworkReply* m_reply;
     QtScriptResolver* m_scriptResolver;
 
     google::sparsetable<char> m_cache;

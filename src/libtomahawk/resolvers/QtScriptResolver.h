@@ -98,6 +98,9 @@ public slots:
 
     void reportCapabilities( const QVariant& capabilities );
 
+private slots:
+    void onTagReady(QVariantMap &tags, const QString&);
+
 private:
     void returnStreamUrl( const QString& streamUrl,
                           boost::function< void( QSharedPointer< QIODevice >& ) > callback ,
