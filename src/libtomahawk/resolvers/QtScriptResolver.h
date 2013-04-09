@@ -70,8 +70,6 @@ public:
                   const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction,
                   const QString& javascriptRefreshUrlFunction = QString(), const bool refreshUrlEachTime = false );
 
-    Q_INVOKABLE void addLocalJSFile(const QString& jsFilePath);
-
     Q_INVOKABLE void requestWebView(const QString& varName, const QString& url);
 
     Q_INVOKABLE void showWebInspector();

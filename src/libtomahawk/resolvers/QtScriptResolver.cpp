@@ -386,12 +386,6 @@ QtScriptResolverHelper::onTagReady( QVariantMap &tags, const QString& javascript
     m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 }
 
-void
-QtScriptResolverHelper::addLocalJSFile( const QString &jsFilePath )
-{
-    m_resolver->m_engine->mainFrame()->evaluateJavaScript( readRaw(jsFilePath) );
-}
-
 
 void
 QtScriptResolverHelper::requestWebView(const QString &varName, const QString &url)
