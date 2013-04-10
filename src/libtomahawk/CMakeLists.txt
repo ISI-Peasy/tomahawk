@@ -133,6 +133,7 @@ set( libGuiSources
     widgets/SeekSlider.cpp
     widgets/PlaylistTypeSelectorDialog.cpp
     widgets/WelcomeWidget.cpp
+    widgets/SessionAlbumWidget.cpp
     widgets/WhatsHotWidget.cpp
     widgets/NewReleasesWidget.cpp
     widgets/ChartDataLoader.cpp
@@ -350,6 +351,7 @@ set( libUI ${libUI}
     widgets/NewPlaylistWidget.ui
     widgets/SearchWidget.ui
     widgets/WelcomeWidget.ui
+    widgets/SessionAlbumWidget.ui
     widgets/WhatsHotWidget.ui
     widgets/NewReleasesWidget.ui
     widgets/SocialPlaylistWidget.ui
