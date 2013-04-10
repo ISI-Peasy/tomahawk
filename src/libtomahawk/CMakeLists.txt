@@ -331,8 +331,6 @@ list(APPEND libSources
     thirdparty/kdsingleapplicationguard/kdsharedmemorylocker.cpp
     thirdparty/kdsingleapplicationguard/kdtoolsglobal.cpp
     thirdparty/kdsingleapplicationguard/kdlockedsharedmemorypointer.cpp
-
-
 )
 
 IF(LIBLASTFM_FOUND)

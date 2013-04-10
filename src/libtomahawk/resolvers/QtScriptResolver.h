@@ -36,9 +36,6 @@
 #include <QWebView>
 #include <QSignalMapper>
 
-#include <taglib/tiostream.h>
-#include <taglib/tfilestream.h>
-
 #ifdef QCA2_FOUND
 #include <QtCrypto>
 #endif
