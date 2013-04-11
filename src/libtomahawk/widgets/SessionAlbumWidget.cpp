@@ -1,4 +1,5 @@
 #include "SessionAlbumWidget.h"
+#include "../playlist/SessionHistoryModel.h"
 #include "ui_SessionAlbumWidget.h"
 
 SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
@@ -6,6 +7,7 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
     ui(new Ui::SessionAlbumWidget)
 {
     ui->setupUi(this);
+    m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
     // TODO : connecter la view avec le model : SessionHistoryModel ( actuellement copie du RecentlyPlayed mais amené a varier :) )
 }
 

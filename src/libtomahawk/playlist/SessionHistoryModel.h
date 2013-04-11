@@ -49,7 +49,9 @@ private slots:
     void onSourceAdded( const Tomahawk::source_ptr& source );
 
     void onPlaybackFinished( const Tomahawk::query_ptr& query );
+    void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
     void loadHistory();
+
 
 private:
     Tomahawk::source_ptr m_source;

@@ -39,6 +39,7 @@ SessionHistoryModel::SessionHistoryModel( QObject* parent )
     : PlaylistModel( parent )
     , m_limit( HISTORY_TRACK_ITEMS )
 {
+    loadHistory();
 }
 
 
@@ -62,7 +63,7 @@ SessionHistoryModel::loadHistory()
 
     // Connect results to the sessionsMaker !
     connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ),
-                    SLOT( appendQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
+                    SLOT( sessionsFromQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
 
     Database::instance()->enqueue( QSharedPointer<DatabaseCommand>( cmd ) );
 }
@@ -145,6 +146,26 @@ SessionHistoryModel::onPlaybackFinished( const Tomahawk::query_ptr& query )
         remove( m_limit );
 
     ensureResolved();
+}
+
+void
+SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries )
+{
+    tDebug() << "Session Calculate From Queries Beginin" ;
+
+    if ( !queries.count() )
+    {
+        emit itemCountChanged( rowCount( QModelIndex() ) );
+        finishLoading();
+        return;
+    }
+    else tDebug() << "Session Calculate starting" ;
+
+    // TODO : get sessions from the retrieving query
+    // usefull code : appendQueries from PlayableModel
+
+    // TODO : find a type of return
+
 }
 
 
