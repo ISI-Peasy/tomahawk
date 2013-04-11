@@ -266,7 +266,7 @@ Tomahawk.asyncRequest = function(url, callback, extraHeaders)
     xmlHttpRequest.send(null);
 };
 
-Tomahawk.asyncPostRequest = function(url, params, callback, extraHeaders)
+Tomahawk.asyncFormPostRequest = function(url, params, callback, extraHeaders)
 {
     var xmlHttpRequest = new XMLHttpRequest();
     xmlHttpRequest.open('POST', url, true);
