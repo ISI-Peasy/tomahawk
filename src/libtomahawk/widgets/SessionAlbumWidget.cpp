@@ -34,7 +34,7 @@ SessionAlbumWidget::jumpToCurrentTrack()
 }
 
 void
-SessionAlbumWidget::loadData()
+SessionAlbumWidget::loadSessionHistory()
 {
    // m_recentAlbumsModel->addFilteredCollection( collection_ptr(), 20, DatabaseCommand_AllAlbums::ModificationTime, true );
 }
