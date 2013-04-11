@@ -6,6 +6,7 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
     ui(new Ui::SessionAlbumWidget)
 {
     ui->setupUi(this);
+    // TODO : connecter la view avec le model : SessionHistoryModel ( actuellement copie du RecentlyPlayed mais amené a varier :) )
 }
 
 SessionAlbumWidget::~SessionAlbumWidget()
@@ -31,11 +32,5 @@ bool
 SessionAlbumWidget::jumpToCurrentTrack()
 {
     return false;
-}
-
-void
-SessionAlbumWidget::loadSessionHistory()
-{
-   // m_recentAlbumsModel->addFilteredCollection( collection_ptr(), 20, DatabaseCommand_AllAlbums::ModificationTime, true );
 }
 

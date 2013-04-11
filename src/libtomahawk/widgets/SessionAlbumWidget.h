@@ -55,7 +55,6 @@ public:
 
     virtual bool jumpToCurrentTrack();
 
-    void loadSessionHistory();
     
 private:
     Ui::SessionAlbumWidget *ui;
