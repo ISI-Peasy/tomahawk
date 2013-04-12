@@ -6,41 +6,34 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>524</width>
-    <height>369</height>
+    <width>875</width>
+    <height>513</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="HeaderLabel" name="lblSessionAlbum">
+  <widget class="QWidget" name="verticalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>17</y>
-     <width>426</width>
-     <height>17</height>
+     <x>10</x>
+     <y>10</y>
+     <width>431</width>
+     <height>321</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Sessions</string>
-   </property>
-  </widget>
-  <widget class="GridView" name="SessionsView">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>40</y>
-     <width>426</width>
-     <height>222</height>
-    </rect>
-   </property>
-   <property name="dragEnabled">
-    <bool>true</bool>
-   </property>
-   <property name="selectionMode">
-    <enum>QAbstractItemView::ExtendedSelection</enum>
-   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="HeaderLabel" name="lblSessionAlbum">
+      <property name="text">
+       <string>Sessions</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QListView" name="sessionsView"/>
+    </item>
+   </layout>
   </widget>
  </widget>
  <customwidgets>
@@ -48,11 +41,6 @@
    <class>HeaderLabel</class>
    <extends>QLabel</extends>
    <header location="global">widgets/HeaderLabel.h</header>
-  </customwidget>
-  <customwidget>
-   <class>GridView</class>
-   <extends>QListView</extends>
-   <header>playlist/GridView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
