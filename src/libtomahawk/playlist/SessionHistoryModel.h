@@ -51,6 +51,8 @@ private slots:
     void onPlaybackFinished( const Tomahawk::query_ptr& query );
     void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
     void loadHistory();
+    void retrievePlayBackSongs() ;
+    void retrieveLovedSongs() ;
 
 
 private:

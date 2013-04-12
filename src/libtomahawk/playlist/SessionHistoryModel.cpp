@@ -26,6 +26,7 @@
 #include "SourceList.h"
 #include "database/Database.h"
 #include "database/DatabaseCommand_PlaybackHistory.h"
+#include "database/DatabaseCommand_GenericSelect.h"
 #include "PlayableItem.h"
 #include "utils/TomahawkUtils.h"
 #include "utils/Logger.h"
@@ -57,11 +58,51 @@ SessionHistoryModel::loadHistory()
     }
     startLoading();
 
-    // TODO : Retrieve data and give them away to form the sessions
+    // Retrieve Data from DB and pass it out to session builder
+    retrievePlayBackSongs() ;
+    retrieveLovedSongs();
+
+    // TODO get the return from the session maker ! slot&co
+
+}
+
+void
+SessionHistoryModel::retrievePlayBackSongs()
+{
     DatabaseCommand_PlaybackHistory* cmd = new DatabaseCommand_PlaybackHistory( m_source );
     cmd->setLimit( m_limit );
 
-    // Connect results to the sessionsMaker !
+    // Collect the return from db into SessionsFromQueries to build sessions
+    connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ),
+                    SLOT( sessionsFromQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
+
+    Database::instance()->enqueue( QSharedPointer<DatabaseCommand>( cmd ) );
+}
+
+void
+SessionHistoryModel::retrieveLovedSongs()
+{
+    QString sql;
+    if ( m_source.isNull() )
+    {
+        sql = QString( "SELECT track.name, artist.name, source, COUNT(*) as counter "
+                       "FROM social_attributes, track, artist "
+                       "WHERE social_attributes.id = track.id AND artist.id = track.artist AND social_attributes.k = 'Love' AND social_attributes.v = 'true' "
+                       "GROUP BY track.id "
+                       "ORDER BY counter DESC, social_attributes.timestamp DESC LIMIT 0, 50" );
+    }
+    else
+    {
+        sql = QString( "SELECT track.name, artist.name, COUNT(*) as counter "
+                       "FROM social_attributes, track, artist "
+                       "WHERE social_attributes.id = track.id AND artist.id = track.artist AND social_attributes.k = 'Love' AND social_attributes.v = 'true' AND social_attributes.source %1 "
+                       "GROUP BY track.id "
+                       "ORDER BY counter DESC, social_attributes.timestamp DESC " ).arg( m_source->isLocal() ? "IS NULL" : QString( "= %1" ).arg( m_source->id() ) );
+    }
+
+    DatabaseCommand_GenericSelect* cmd = new DatabaseCommand_GenericSelect( sql, DatabaseCommand_GenericSelect::Track, -1, 0 );
+    //connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ), this, SLOT( tracksLoaded( QList<Tomahawk::query_ptr> ) ) );
+
     connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ),
                     SLOT( sessionsFromQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
 
@@ -162,9 +203,18 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     else tDebug() << "Session Calculate starting" ;
 
     // TODO : get sessions from the retrieving query
-    // usefull code : appendQueries from PlayableModel
+    // usefull code : appendQueries from PlayableModel , LovedTracksModel::tracksLoaded also !
+    // playedBy() function on a query to get the timestamp ! carefull it's this struct  :
+    /* void
+    Query::setPlayedBy( const Tomahawk::source_ptr& source, unsigned int playtime )
+    {
+        m_playedBy.first = source;
+        m_playedBy.second = playtime;
+    }
+    */
 
-    // TODO : find a type of return
+    // TODO : find a type of return : emit or return ?
+
 
 }
 
