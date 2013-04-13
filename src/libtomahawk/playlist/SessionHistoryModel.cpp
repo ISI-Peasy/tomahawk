@@ -42,7 +42,6 @@ SessionHistoryModel::SessionHistoryModel( QObject* parent )
     : PlaylistModel( parent )
     , m_limit( HISTORY_TRACK_ITEMS )
 {
-    loadHistory();
 }
 
 
@@ -117,10 +116,10 @@ SessionHistoryModel::onSourcesReady()
 {
     Q_ASSERT( m_source.isNull() );
 
-    loadHistory();
-
     foreach ( const source_ptr& source, SourceList::instance()->sources() )
         onSourceAdded( source );
+
+    loadHistory();
 }
 
 
@@ -215,7 +214,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
 
     unsigned int lastTimeStamp = 0;
 
-    for( int i = 0 ; i < queries.count() ; i++ )
+    for( int i = 0 ; i < queries.count() ; i++ ) // TODO : check duplicate inside queries to erase it
     {
         Tomahawk::query_ptr ptr_q = queries.at( i );
         Tomahawk::Query *query = ptr_q.data();
@@ -260,6 +259,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         }
 
         lastTimeStamp = query->playedBy().second;
+
+      //  tDebug() << "~~~~ session query " << i << " : " << query->toString() << " ~ " << query->playedBy().first << " ~ " << query->playedBy().second;
     }
 
     //debug : show sessions
@@ -268,20 +269,10 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         tDebug() << "session " << i << " : " << sessions.at(i).first << " [" <<  sessions.at(i).second.count() << "]";
         for( int j = 0; j < sessions.at(i).second.count(); j++)
         {
-            tDebug() << "  " << sessions.at(i).second.at(j).data()->toString();
+             tDebug() << "   -  " << track->toString() << "source" <<track->playedBy().first->friendlyName();
         }
     }
-
-    // TODO : get sessions from the retrieving query
-    // usefull code : appendQueries from PlayableModel , LovedTracksModel::tracksLoaded also !
-    // playedBy() function on a query to get the timestamp ! carefull it's this struct  :
-    /* void
-    Query::setPlayedBy( const Tomahawk::source_ptr& source, unsigned int playtime )
-    {
-        m_playedBy.first = source;
-        m_playedBy.second = playtime;
-    }
-     // TODO : find a way of return : emit or return ?
+     // TODO : find a way of return : emit or return ? to feed the model
 }
 
 
