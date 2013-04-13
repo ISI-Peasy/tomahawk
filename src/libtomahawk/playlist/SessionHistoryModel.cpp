@@ -209,6 +209,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
     aSession.second = QList< Tomahawk::query_ptr >();
 
+    QList< QString > aSessionArtists = QList< QString >();
+
     unsigned int lastTimeStamp = 0;
 
     for( int i = 0 ; i < queries.count() ; i++ )
@@ -221,6 +223,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
             lastTimeStamp = query->playedBy().second;
         }
 
+        //TODO: enhancement : use the duration to calculate better the sessions
         if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS )
         {
             //it's the same session, we add it
@@ -234,6 +237,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
             sessions << aSession;
             //new session
             aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+            //add the current query in the new session
+            aSession.second << ptr_q;
         }
 
         lastTimeStamp = query->playedBy().second;
