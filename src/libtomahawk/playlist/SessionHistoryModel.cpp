@@ -267,12 +267,13 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
         tDebug() << "session " << i << " : " << sessions.at(i).first << " [" <<  sessions.at(i).second.count() << "]";
-        for( int j = 0; j < sessions.at(i).second.count(); j++)
+
+        foreach ( const Tomahawk::query_ptr track, sessions.at(i).second )
         {
-             tDebug() << "   -  " << track->toString() << "source" <<track->playedBy().first->friendlyName();
-        }
+            tDebug() << "   -  " << track->toString() << "source" << track->playedBy().first->friendlyName() << " played :" << track->playedBy().second ;
+        };
     }
-     // TODO : find a way of return : emit or return ? to feed the model
+    // TODO : find a way of return : emit or return ? to feed the model
 }
 
 
