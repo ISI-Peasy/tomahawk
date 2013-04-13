@@ -242,32 +242,18 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         }
 
         lastTimeStamp = query->playedBy().second;
-
-        tDebug() << "~~~~ session query " << i << " : " << query->toString() << " ~ " << query->playedBy().second;
     }
-
-    tDebug() << "~~~~ sessions : " << sessions.count();
 
     //debug : show sessions
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
-        tDebug() << "session " << i << " : " << sessions.at(i).first << " [ " <<  sessions.at(i).second.count() << "]";
+        tDebug() << "Session " << i << " : " << sessions.at(i).first << " [ " <<  sessions.at(i).second.count() << "]";
+        foreach ( const Tomahawk::query_ptr track, sessions.at(i).second )
+        {
+            tDebug() << "   -  " << track->toString();
+        };
     }
-
-    // TODO : get sessions from the retrieving query
-    // usefull code : appendQueries from PlayableModel , LovedTracksModel::tracksLoaded also !
-    // playedBy() function on a query to get the timestamp ! carefull it's this struct  :
-    /* void
-    Query::setPlayedBy( const Tomahawk::source_ptr& source, unsigned int playtime )
-    {
-        m_playedBy.first = source;
-        m_playedBy.second = playtime;
-    }
-    */
-
-    // TODO : find a type of return : emit or return ?
-
-
+     // TODO : find a way of return : emit or return ?
 }
 
 
