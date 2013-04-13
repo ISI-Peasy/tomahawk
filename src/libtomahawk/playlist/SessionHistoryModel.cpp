@@ -260,11 +260,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         }
 
         lastTimeStamp = query->playedBy().second;
-
-        tDebug() << "~~~~ session query " << i << " : " << query->toString() << " ~ " << query->playedBy().second;
     }
-
-    tDebug() << "~~~~ sessions : " << sessions.count();
 
     //debug : show sessions
     for( int i = 0 ; i < sessions.count() ; i++ )
@@ -285,11 +281,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         m_playedBy.first = source;
         m_playedBy.second = playtime;
     }
-    */
-
-    // TODO : find a type of return : emit or return ?
-
-
+     // TODO : find a way of return : emit or return ?
 }
 
 
