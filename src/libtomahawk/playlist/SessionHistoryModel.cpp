@@ -210,6 +210,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     aSession.second = QList< Tomahawk::query_ptr >();
 
     QList< QString > aSessionArtists = QList< QString >();
+    QString currentArtist;
+    int currentArtistOccurs;
 
     unsigned int lastTimeStamp = 0;
 
@@ -228,17 +230,33 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         {
             //it's the same session, we add it
             aSession.second << ptr_q;
+            aSessionArtists << query->artist();
         }
         else
         {
+            //calculate the most recurent artist of the session
+            currentArtist = QString();
+            currentArtistOccurs = 0;
+            for( int ca = 0; ca < aSessionArtists.count(); ca++ )
+            {
+                if( aSessionArtists.count( aSessionArtists.at(ca) ) > currentArtistOccurs )
+                {
+                    currentArtist =  aSessionArtists.at(ca);
+                    currentArtistOccurs = aSessionArtists.count( aSessionArtists.at(ca) );
+                }
+            }
+
+            aSessionArtists = QList< QString >();
+
             //add the curent session to the session list
-            aSession.first = QString("Session ");
+            aSession.first = currentArtist;
 
             sessions << aSession;
             //new session
             aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
             //add the current query in the new session
             aSession.second << ptr_q;
+            aSessionArtists << query->artist();
         }
 
         lastTimeStamp = query->playedBy().second;
@@ -251,7 +269,11 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     //debug : show sessions
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
-        tDebug() << "session " << i << " : " << sessions.at(i).first << " [ " <<  sessions.at(i).second.count() << "]";
+        tDebug() << "session " << i << " : " << sessions.at(i).first << " [" <<  sessions.at(i).second.count() << "]";
+        for( int j = 0; j < sessions.at(i).second.count(); j++)
+        {
+            tDebug() << "  " << sessions.at(i).second.at(j).data()->toString();
+        }
     }
 
     // TODO : get sessions from the retrieving query
