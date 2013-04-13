@@ -33,6 +33,8 @@
 
 #define HISTORY_TRACK_ITEMS 25
 
+const static int MAX_TIME_BETWEEN_TRACKS = 10 * 60 * 60;
+
 using namespace Tomahawk;
 
 
@@ -201,6 +203,51 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         return;
     }
     else tDebug() << "Session Calculate starting" ;
+
+    QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions = QList< QPair< QString, QList< Tomahawk::query_ptr> > >();
+
+    QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+    aSession.second = QList< Tomahawk::query_ptr >();
+
+    unsigned int lastTimeStamp = 0;
+
+    for( int i = 0 ; i < queries.count() ; i++ )
+    {
+        Tomahawk::query_ptr ptr_q = queries.at( i );
+        Tomahawk::Query *query = ptr_q.data();
+
+        if( lastTimeStamp == 0 )
+        {
+            lastTimeStamp = query->playedBy().second;
+        }
+
+        if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS )
+        {
+            //it's the same session, we add it
+            aSession.second << ptr_q;
+        }
+        else
+        {
+            //add the curent session to the session list
+            aSession.first = QString("Session ");
+
+            sessions << aSession;
+            //new session
+            aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+        }
+
+        lastTimeStamp = query->playedBy().second;
+
+        tDebug() << "~~~~ session query " << i << " : " << query->toString() << " ~ " << query->playedBy().second;
+    }
+
+    tDebug() << "~~~~ sessions : " << sessions.count();
+
+    //debug : show sessions
+    for( int i = 0 ; i < sessions.count() ; i++ )
+    {
+        tDebug() << "session " << i << " : " << sessions.at(i).first << " [ " <<  sessions.at(i).second.count() << "]";
+    }
 
     // TODO : get sessions from the retrieving query
     // usefull code : appendQueries from PlayableModel , LovedTracksModel::tracksLoaded also !
