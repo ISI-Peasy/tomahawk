@@ -39,8 +39,8 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
+    ui->sessionsView->setItemDelegate( new SessionDelegate() );
     ui->sessionsView->setModel( m_sessionsModel );
-    //ui->sessionsView->setItemDelegate( new SessionDelegate() );
     m_sessionsModel->setSource( source_ptr() );
 
     connect( SourceList::instance(), SIGNAL( ready() ), SLOT( onSourcesReady() ) );
@@ -92,7 +92,83 @@ SessionAlbumWidget::jumpToCurrentTrack()
 
 void SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-    // TODO : Delegate Paint - Laumaned'job
+    QStyleOptionViewItemV4 opt = option;
+    initStyleOption( &opt, QModelIndex() );
+    qApp->style()->drawControl( QStyle::CE_ItemViewItem, &opt, painter );
+
+    if ( option.state & QStyle::State_Selected && option.state & QStyle::State_Active )
+    {
+        opt.palette.setColor( QPalette::Text, opt.palette.color( QPalette::HighlightedText ) );
+    }
+
+    painter->save();
+    painter->setRenderHint( QPainter::Antialiasing );
+    painter->setPen( opt.palette.color( QPalette::Text ) );
+
+    QTextOption to;
+    to.setAlignment( Qt::AlignCenter );
+    QFont font = opt.font;
+    font.setPointSize( TomahawkUtils::defaultFontSize() - 1 );
+
+    QFont boldFont = font;
+    boldFont.setBold( true );
+    boldFont.setPointSize( TomahawkUtils::defaultFontSize() );
+    QFontMetrics boldFontMetrics( boldFont );
+
+    QFont figFont = boldFont;
+    figFont.setPointSize( TomahawkUtils::defaultFontSize() - 1 );
+
+    QPixmap icon;
+    QRect pixmapRect = option.rect.adjusted( 10, 14, -option.rect.width() + option.rect.height() - 18, -14 );
+
+    icon = TomahawkUtils::defaultPixmap( TomahawkUtils::Playlist, TomahawkUtils::Original, pixmapRect.size() );
+    painter->drawPixmap( pixmapRect, icon );
+
+
+    QRect r( option.rect.width() - option.fontMetrics.height() * 2.5 - 10, option.rect.top() + option.rect.height() / 3 - option.fontMetrics.height(), option.fontMetrics.height() * 2.5, option.fontMetrics.height() * 2.5 );
+    QPixmap avatar;
+
+    if ( avatar.isNull() )
+        avatar = TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultSourceAvatar, TomahawkUtils::RoundedCorners, r.size() );
+    painter->drawPixmap( r, avatar );
+
+    painter->setFont( font );
+//     RecentlyPlayedPlaylistsModel::PlaylistTypes type = (RecentlyPlayedPlaylistsModel::PlaylistTypes)index.data( RecentlyPlayedPlaylistsModel::PlaylistTypeRole ).toInt();
+//    QString author = index.data( RecentlyPlayedPlaylistsModel::PlaylistRole ).value< Tomahawk::playlist_ptr >()->author()->friendlyName();
+//    if ( author.indexOf( '@' ) > 0 )
+//        author = author.mid( 0, author.indexOf( '@' ) );
+    QString author = "auteur";
+
+    const int w = painter->fontMetrics().width( author ) + 2;
+    QRect avatarNameRect( opt.rect.width() - 10 - w, r.bottom(), w, opt.rect.bottom() - r.bottom() );
+    painter->drawText( avatarNameRect, author, QTextOption( Qt::AlignCenter ) );
+
+    const int leftEdge = opt.rect.width() - qMin( avatarNameRect.left(), r.left() );
+    QString descText;
+//    descText = index.data( SessionHistoryModel::ArtistRole ).toString();
+    descText = "description text";
+
+    QColor c = painter->pen().color();
+    if ( !( option.state & QStyle::State_Selected && option.state & QStyle::State_Active ) )
+    {
+        painter->setPen( QColor( Qt::gray ).darker() );
+    }
+
+    QRect rectText = option.rect.adjusted( option.fontMetrics.height() * 4.5, boldFontMetrics.height() + 6, -leftEdge - 10, -8 );
+#ifdef Q_WS_MAC
+    rectText.adjust( 0, 1, 0, 0 );
+#elif defined Q_WS_WIN
+    rectText.adjust( 0, 2, 0, 0 );
+#endif
+
+    painter->drawText( rectText, descText );
+    painter->setPen( c );
+    painter->setFont( font );
+
+    painter->setFont( boldFont );
+    painter->drawText( option.rect.adjusted( option.fontMetrics.height() * 4, 6, -100, -option.rect.height() + boldFontMetrics.height() + 6 ), index.data().toString() );
+
+    painter->restore();
 }
 
 QSize SessionDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
