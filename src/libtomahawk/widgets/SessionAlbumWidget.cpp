@@ -26,6 +26,7 @@
 #include "ui_SessionAlbumWidget.h"
 #include "playlist/RecentlyPlayedModel.h"
 #include "utils/TomahawkUtilsGui.h"
+#include "SourceList.h"
 
 #include <QPainter>
 
@@ -38,17 +39,28 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
-
-    //ui->sessionsView->setItemDelegate( new PlaylistDelegate() ); TODO : Delegate
     ui->sessionsView->setModel( m_sessionsModel );
     //ui->sessionsView->setItemDelegate( new SessionDelegate() );
     m_sessionsModel->setSource( source_ptr() );
+
+    connect( SourceList::instance(), SIGNAL( ready() ), SLOT( onSourcesReady() ) );
 }
 
 void
 SessionAlbumWidget::loadData()
 {
     //m_sessionsModel->loadHistory(); // doesn't work because the db isn't ready when we call it
+}
+
+void SessionAlbumWidget::onSourcesReady()
+{
+    foreach ( const source_ptr& source, SourceList::instance()->sources() )
+        onSourceAdded( source );
+}
+
+void SessionAlbumWidget::onSourceAdded( const Tomahawk::source_ptr& source )
+{
+
 }
 
 SessionAlbumWidget::~SessionAlbumWidget()

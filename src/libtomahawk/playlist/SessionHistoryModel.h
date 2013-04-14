@@ -35,6 +35,8 @@ class DLLEXPORT SessionHistoryModel : public QAbstractListModel
 Q_OBJECT
 
 public:
+    enum ItemRoles
+    { DisplayRole = Qt::DisplayRole,  SessionRole , SourceRole, PlaytimeRole };
     explicit SessionHistoryModel( QObject* parent = 0 );
     ~SessionHistoryModel();
 
@@ -48,7 +50,7 @@ public slots:
     void setSource( const Tomahawk::source_ptr& source );
 
 private slots:
-    void onSourcesReady(); // PlaylistModel
+    void onSourcesReady();
     void onSourceAdded( const Tomahawk::source_ptr& source );
     void onPlaybackFinished( const Tomahawk::query_ptr& query );
 

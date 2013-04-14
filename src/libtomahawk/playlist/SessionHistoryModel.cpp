@@ -37,12 +37,12 @@ const static int MAX_TIME_BETWEEN_TRACKS = 10 * 60 * 60;
 
 using namespace Tomahawk;
 
-
 SessionHistoryModel::SessionHistoryModel( QObject* parent )
     //: PlaylistModel( parent )
       : QAbstractListModel( parent )
     , m_limit( HISTORY_SESSION_ITEMS )
 {
+    connect( SourceList::instance(), SIGNAL( sourceAdded( Tomahawk::source_ptr ) ), this, SLOT( onSourceAdded( Tomahawk::source_ptr ) ), Qt::QueuedConnection );
 }
 
 
@@ -55,12 +55,12 @@ SessionHistoryModel::loadHistory()
 {
     if ( rowCount( QModelIndex() ) )
     {
-       // beginResetModel(); // usefull ?
+       //beginResetModel(); // usefull ?
     }
-    //startLoading(); // usefull ?
+    //startLoading(); // to replace
 
     retrievePlayBackSongs() ;
-    //retrieveLovedSongs();
+    //retrieveLovedSongs(); // TODO : Reason of segfault : to debug
 }
 
 void
@@ -152,6 +152,7 @@ SessionHistoryModel::onPlaybackFinished( const Tomahawk::query_ptr& query )
 {
     //TODO
 }
+
 
 void
 SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries )
@@ -258,7 +259,6 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
 
             lastTimeStamp = query->playedBy().second + query->duration();
 
-
         }
 
         //calculate the most recurent artist of the last session
@@ -280,7 +280,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         //tDebug() << "last session nb " << ( sessions.count() ) << " aded to session list";
     }
 
-
+    // insert the sessions inside the model
+    feedModelWithSessions(sessions) ;
 
     //debug : show sessions
     tDebug() << "We have calculate " << sessions.count() << " sessions :";
@@ -293,9 +294,6 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
             tDebug() << "   - " << track->artist() << track->track() << " from " << track->playedBy().first->friendlyName() << " played at " << track->playedBy().second ;
         };
     }
-    // TODO : find a proper way of return : emit or return ? to feed the model
-    feedModelWithSessions(sessions) ;
-
 }
 
 void
@@ -322,15 +320,29 @@ QVariant SessionHistoryModel::data( const QModelIndex& index, int role ) const
     if( !index.isValid() || !hasIndex( index.row(), index.column(), index.parent() ) )
         return QVariant();
 
-    if (role == Qt::DisplayRole)
+    QPair< QString, QList< Tomahawk::query_ptr> > mySession =  m_sessionslist.at(index.row()) ;
+
+    switch( role )
     {
-        //
-        QString source = m_sessionslist.at(index.row()).second.at(0)->playedBy().first->friendlyName() ;
-        QString sessionLabel = m_sessionslist.at(index.row()).first ;
-        return (source +" 'session : "+ sessionLabel) ;
+    case Qt::DisplayRole:
+    {
+        return (mySession.second.at(0)->playedBy().first->friendlyName() +" : "+ mySession.first ) ;
     }
-    else
+    case SourceRole:
+    {
+        return mySession.second.at(0)->playedBy().first->friendlyName() ;
+    }
+    case SessionRole:
+    {
+        return mySession.first ;
+    }
+    case PlaytimeRole:
+    {
+        return mySession.second.at(0)->playedBy().second ;
+    }
+    default:
         return QVariant();
+    }
 }
 
 int SessionHistoryModel::rowCount( const QModelIndex& ) const

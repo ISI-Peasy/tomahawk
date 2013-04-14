@@ -51,11 +51,10 @@ protected:
     QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
 };
 
-
 class SessionAlbumWidget : public QWidget, public Tomahawk::ViewPage
 {
     Q_OBJECT
-    
+
 public:
     explicit SessionAlbumWidget(QWidget *parent = 0);
     ~SessionAlbumWidget();
@@ -73,6 +72,10 @@ public:
 
 public slots:
     void loadData();
+
+private slots:
+    void onSourcesReady();
+    void onSourceAdded( const Tomahawk::source_ptr& source );
 
 private:
     Ui::SessionAlbumWidget *ui;
