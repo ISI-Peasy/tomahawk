@@ -36,9 +36,6 @@
 #include <QWebView>
 #include <QSignalMapper>
 
-#include <taglib/tiostream.h>
-#include <taglib/tfilestream.h>
-
 #ifdef QCA2_FOUND
 #include <QtCrypto>
 #endif
@@ -60,22 +57,19 @@ public:
     Q_INVOKABLE QString md5( const QByteArray& input );
 
     Q_INVOKABLE void addCustomUrlHandler( const QString& protocol, const QString& callbackFuncName, const QString& isAsynchronous = "false" );
-    Q_INVOKABLE void reportStreamUrl( const QString& qid, const QString& streamUrl );
+    Q_INVOKABLE void reportStreamUrl( const QString& qid, const QString& streamUrl, const QVariantMap& headers = QVariantMap() );
 
     Q_INVOKABLE QByteArray base64Encode( const QByteArray& input );
     Q_INVOKABLE QByteArray base64Decode( const QByteArray& input );
 
     // send ID3Tags of the stream as argument of the callback function
-    Q_INVOKABLE void
-    ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction);
-
-    Q_INVOKABLE void addLocalJSFile(const QString& jsFilePath);
+    Q_INVOKABLE void readCloudFile( const QString& fileName, const QString& fileId, const QString& sizeS,
+                  const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction,
+                  const QString& javascriptRefreshUrlFunction = QString(), const bool refreshUrlEachTime = false );
 
     Q_INVOKABLE void requestWebView(const QString& varName, const QString& url);
 
     Q_INVOKABLE void showWebInspector();
-
-    QSharedPointer<QIODevice> customIODeviceFactory( const Tomahawk::result_ptr& result );
 
     void customIODeviceFactory( const Tomahawk::result_ptr& result,
                                 boost::function< void( QSharedPointer< QIODevice >& ) > callback ); // async
@@ -99,8 +93,13 @@ public slots:
 
     void reportCapabilities( const QVariant& capabilities );
 
+private slots:
+    void onTagReady(QVariantMap &tags, const QString&);
+
 private:
-    void returnStreamUrl( const QString& streamUrl, boost::function< void( QSharedPointer< QIODevice >& ) > callback );
+    void returnStreamUrl( const QString& streamUrl,
+                          boost::function< void( QSharedPointer< QIODevice >& ) > callback ,
+                          const QVariantMap &headers = QVariantMap() );
     QString m_scriptPath, m_urlCallback;
     QHash< QString, boost::function< void( QSharedPointer< QIODevice >& ) > > m_streamCallbacks;
     bool m_urlCallbackIsAsync;
@@ -109,7 +108,6 @@ private:
 #ifdef QCA2_FOUND
     QCA::Initializer m_qcaInit;
 #endif
-    QNetworkAccessManager* network;
 };
 
 class DLLEXPORT ScriptEngine : public QWebPage
@@ -128,6 +126,7 @@ public:
         settings()->setAttribute( QWebSettings::LocalStorageDatabaseEnabled, true );
         settings()->setAttribute( QWebSettings::LocalContentCanAccessFileUrls, true );
         settings()->setAttribute( QWebSettings::LocalContentCanAccessRemoteUrls, true );
+        settings()->setAttribute( QWebSettings::DeveloperExtrasEnabled, true );
 
         // Tomahawk is not a user agent
         m_header = QWebPage::userAgentForUrl( QUrl() ).replace( QString( "%1/%2" )
@@ -201,7 +200,7 @@ public slots:
     virtual void albums( const Tomahawk::collection_ptr& collection, const Tomahawk::artist_ptr& artist );
     virtual void tracks( const Tomahawk::collection_ptr& collection, const Tomahawk::album_ptr& album );
 
-    void executeJavascript(const QString& );
+    QVariant executeJavascript(const QString& );
 
 signals:
     void stopped();

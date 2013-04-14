@@ -27,7 +27,7 @@
 #include "ScriptCollection.h"
 #include "SourceList.h"
 
-
+#include "utils/CloudStream.h"
 
 #include "utils/TomahawkUtils.h"
 #include "TomahawkSettings.h"
@@ -57,37 +57,6 @@
 
 #include <boost/bind.hpp>
 
-//--- includes readcloudFile
-//#include "taghandlers/tag.h"
-# include "utils/cloudstream.h"
-
-#include <taglib/aifffile.h>
-#include <taglib/asffile.h>
-#include <taglib/attachedpictureframe.h>
-#include <taglib/commentsframe.h>
-#include <taglib/fileref.h>
-#include <taglib/flacfile.h>
-#include <taglib/id3v2tag.h>
-#include <taglib/mp4file.h>
-#include <taglib/mp4tag.h>
-#include <taglib/mpcfile.h>
-#include <taglib/mpegfile.h>
-#include <taglib/oggfile.h>
-#ifdef TAGLIB_HAS_OPUS
-#include <taglib/opusfile.h>
-#endif
-#include <taglib/oggflacfile.h>
-#include <taglib/speexfile.h>
-#include <taglib/tag.h>
-#include <taglib/textidentificationframe.h>
-#include <taglib/trueaudiofile.h>
-#include <taglib/tstring.h>
-#include <taglib/vorbisfile.h>
-#include <taglib/wavfile.h>
-
-#include <boost/scoped_ptr.hpp>
-//--- end includes readcloudfile
-
 // FIXME: bloody hack, remove this for 0.3
 // this one adds new functionality to old resolvers
 #define RESOLVER_LEGACY_CODE "var resolver = Tomahawk.resolver.instance ? Tomahawk.resolver.instance : TomahawkResolver;"
@@ -101,7 +70,6 @@ QtScriptResolverHelper::QtScriptResolverHelper( const QString& scriptPath, QtScr
 {
     m_scriptPath = scriptPath;
     m_resolver = parent;
-    network = new QNetworkAccessManager(this);
 }
 
 
@@ -363,150 +331,59 @@ QtScriptResolverHelper::base64Decode( const QByteArray& input )
 
 
 void
-QtScriptResolverHelper::ReadCloudFile(const QString& fileName, const QString& fileId, const QString& sizeS, const QString& mime_type, const QVariant& requestJS, const QString& javascriptCallbackFunction)
+QtScriptResolverHelper::readCloudFile(const QString& fileName, const QString& fileId,
+                                      const QString& sizeS, const QString& mime_type,
+                                      const QVariant& requestJS, const QString& javascriptCallbackFunction,
+                                      const QString& javascriptRefreshUrlFunction, const bool refreshUrlEachTime)
 {
 
     QVariantMap request;
     QUrl download_url;
     QVariantMap headers;
-    QVariantMap m;
     long size = sizeS.toLong();
+    QString urlString;
 
-
-
-
-    if(requestJS.type() == QVariant::Map)
+    if ( requestJS.type() == QVariant::Map )
     {
         request = requestJS.toMap();
 
-        download_url = QUrl(request["url"].toString());
+        urlString = request["url"].toString();
 
         headers = request["headers"].toMap();
     }
     else
     {
-        download_url = QUrl(requestJS.toString());
+        urlString = requestJS.toString();
     }
+
+    download_url.setUrl( urlString );
 
     tDebug( LOGINFO ) << "#### ReadCloudFile : Loading tags of " << fileName << " from " << download_url.toString() << " which have id " << fileId;
 
 
-    m["fileId"] = fileId;
-    m["mimetype"] = mime_type.toUtf8();
+    CloudStream* stream = new CloudStream( download_url, fileName, fileId,
+                                           size, mime_type, headers, m_resolver,
+                                           javascriptRefreshUrlFunction, javascriptCallbackFunction, refreshUrlEachTime );
 
-
-    CloudStream* stream = new CloudStream(
-        download_url, fileName, size, headers, network);
-    stream->Precache();
-    boost::scoped_ptr<TagLib::File> tag;
-    if (mime_type == "audio/mpeg") { // && title.endsWith(".mp3")) {
-      tag.reset(new TagLib::MPEG::File(
-          stream,  // Takes ownership.
-          TagLib::ID3v2::FrameFactory::instance(),
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "audio/mp4" ||
-               (mime_type == "audio/mpeg")) { //  && title.endsWith(".m4a"))) {
-      tag.reset(new TagLib::MP4::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "application/ogg" ||
-               mime_type == "audio/ogg") {
-      tag.reset(new TagLib::Ogg::Vorbis::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    }
-  #ifdef TAGLIB_HAS_OPUS
-    else if (mime_type == "application/opus" ||
-               mime_type == "audio/opus") {
-      tag.reset(new TagLib::Ogg::Opus::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    }
-  #endif
-    else if (mime_type == "application/x-flac" ||
-               mime_type == "audio/flac") {
-      tag.reset(new TagLib::FLAC::File(
-          stream,
-          TagLib::ID3v2::FrameFactory::instance(),
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else if (mime_type == "audio/x-ms-wma") {
-      tag.reset(new TagLib::ASF::File(
-          stream,
-          true,
-          TagLib::AudioProperties::Accurate));
-    } else {
-      tDebug( LOGINFO ) << "Unknown mime type for tagging:" << mime_type;
-      //return m;
-    }
-
-    if (stream->num_requests() > 2) {
-      // Warn if pre-caching failed.
-     tDebug( LOGINFO ) << "Total requests for file:" << fileName
-                    << stream->num_requests()
-                    << stream->cached_bytes();
-    }
-
-    //construction of the tag's map
-    if (tag->tag() && !tag->tag()->isEmpty()) {
-
-       m["track"] = tag->tag()->title().toCString(true);
-       m["artist"] = tag->tag()->artist().toCString(true);
-       m["album"] = tag->tag()->album().toCString(true);
-       m["size"] = QString::number(size);
-
-      if (tag->tag()->track() != 0) {
-          m["albumpos"] = tag->tag()->track();
-      }
-      if (tag->tag()->year() != 0) {
-          m["year"] = tag->tag()->year();
-      }
-
-      if (tag->audioProperties()) {
-          m["duration"] = tag->audioProperties()->length();
-          m["bitrate"] = tag->audioProperties()->bitrate();
-      }
-/*      if (tag->tag()->albumArtist()) {
-        m["albumartist"]  = tag->tag()->albumArtist();
-      }
-      if (tag->tag()->composer()) {
-        m["composer"]     = tag->tag()->composer();
-      }
-      if (tag->tag()->discNumber() != 0) {
-        m["discnumber"]   = tag->tag()->discNumber();
-      }
-*/
-    }
-
-    QString tabTagsJSON = "{";
-    //we convert the QVariantMap to JSON to give it as an argument of the callback function
-    int nbTags = m.count();
-    int i = 1;
-    foreach(const QString& tag, m.keys()) {
-        tabTagsJSON += "'" + tag + "' : '" + m[tag].toString() + "'";
-        if(i != nbTags){
-            tabTagsJSON += ", ";
-        }
-        i++;
-    }
-    tabTagsJSON += "}";
-
-    tDebug() << "#### ReadCloudFile : Sending tags to js : " <<tabTagsJSON;
-
-    QString getUrl = QString( "Tomahawk.resolver.instance.%1( %2 );" ).arg( javascriptCallbackFunction )
-                                                                        .arg( tabTagsJSON );
-
-    m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
+    connect( stream, SIGNAL( tagsReady(QVariantMap &, const QString& ) ), this, SLOT( onTagReady( QVariantMap&, const QString& ) ) );
+    stream->precache();
 }
 
 
 void
-QtScriptResolverHelper::addLocalJSFile( const QString &jsFilePath )
+QtScriptResolverHelper::onTagReady( QVariantMap &tags, const QString& javascriptCallbackFunction )
 {
-    m_resolver->m_engine->mainFrame()->evaluateJavaScript( readRaw(jsFilePath) );
+
+    QJson::Serializer serializer;
+
+    QByteArray json = serializer.serialize( tags );
+
+    tDebug() << "#### ReadCloudFile : Sending tags to js : " << json;
+
+    QString getUrl = QString( "Tomahawk.resolver.instance.%1( %2 );" ).arg( javascriptCallbackFunction )
+            .arg( QString(json) );
+
+    m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 }
 
 
@@ -554,8 +431,8 @@ QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& resul
                                                                             .arg( origResultUrl );
 
         QString urlStr;
-        QNetworkRequest req;
-        QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl ).toString();
+        QVariantMap headers;
+        QVariant jsResult = m_resolver->m_engine->mainFrame()->evaluateJavaScript( getUrl );
 
         if ( jsResult.type() == QVariant::String )
         {
@@ -567,36 +444,32 @@ QtScriptResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr& resul
 
             urlStr = request["url"].toString();
 
-            QVariantMap headers = request["headers"].toMap();
-            foreach ( const QString& headerName, headers.keys() )
-            {
-                req.setRawHeader( headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit() );
-            }
+            headers = request["headers"].toMap();
         }
 
-        QUrl url = QUrl::fromEncoded( urlStr.toUtf8() );
-        req.setUrl( url );
-
-        returnStreamUrl( urlStr, callback );
+        returnStreamUrl( urlStr, callback, headers );
     }
 }
 
 
 void
 QtScriptResolverHelper::reportStreamUrl( const QString& qid,
-                                         const QString& streamUrl )
+                                         const QString& streamUrl,
+                                         const QVariantMap& headers )
 {
     if ( !m_streamCallbacks.contains( qid ) )
         return;
 
     boost::function< void( QSharedPointer< QIODevice >& ) > callback = m_streamCallbacks.take( qid );
 
-    returnStreamUrl( streamUrl, callback );
+    returnStreamUrl( streamUrl, callback, headers );
 }
 
 
 void
-QtScriptResolverHelper::returnStreamUrl( const QString& streamUrl, boost::function< void( QSharedPointer< QIODevice >& ) > callback )
+QtScriptResolverHelper::returnStreamUrl( const QString& streamUrl,
+                                         boost::function< void( QSharedPointer< QIODevice >& ) > callback,
+                                         const QVariantMap& headers)
 {
     QSharedPointer< QIODevice > sp;
     if ( streamUrl.isEmpty() )
@@ -607,6 +480,11 @@ QtScriptResolverHelper::returnStreamUrl( const QString& streamUrl, boost::functi
 
     QUrl url = QUrl::fromEncoded( streamUrl.toUtf8() );
     QNetworkRequest req( url );
+
+    foreach ( const QString& headerName, headers.keys() )
+    {
+        req.setRawHeader( headerName.toLocal8Bit(), headers[headerName].toString().toLocal8Bit() );
+    }
 
     tDebug() << "Creating a QNetowrkReply with url:" << req.url().toString();
     QNetworkReply* reply = TomahawkUtils::nam()->get( req );
@@ -1369,8 +1247,8 @@ QtScriptResolver::resolverCollections()
     // + data.
 }
 
-void QtScriptResolver::executeJavascript(const QString &js)
+QVariant QtScriptResolver::executeJavascript(const QString &js)
 {
-    m_engine->mainFrame()->evaluateJavaScript( RESOLVER_LEGACY_CODE + js );
+    return m_engine->mainFrame()->evaluateJavaScript( RESOLVER_LEGACY_CODE + js );
 }
 
