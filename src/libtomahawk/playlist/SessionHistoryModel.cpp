@@ -187,7 +187,6 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions = QList< QPair< QString, QList< Tomahawk::query_ptr> > >();
 
     QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
-    aSession.second = QList< Tomahawk::query_ptr >();
 
     QList< QString > aSessionArtists;
     QString currentArtist;
@@ -200,6 +199,8 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         tDebug() << "Calculating sessions from " << it_sources.key();
 
         //init of iteration vars
+        aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+        aSession.second = QList< Tomahawk::query_ptr >();
         aSessionArtists = QList< QString >();
         currentArtist = QString();
         currentArtistOccurs = 0;
@@ -271,8 +272,6 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
                 currentArtistOccurs = aSessionArtists.count( aSessionArtists.at(ca) );
             }
         }
-
-        aSessionArtists = QList< QString >();
 
         //add the last session to the session list
         aSession.first = currentArtist;
