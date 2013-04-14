@@ -67,6 +67,7 @@ set( libGuiSources
     playlist/LovedTracksModel.cpp
     playlist/RecentlyAddedModel.cpp
     playlist/RecentlyPlayedModel.cpp
+    playlist/SessionHistoryModel.cpp
     playlist/AlbumItemDelegate.cpp
     playlist/PlaylistLargeItemDelegate.cpp
     playlist/PlaylistChartItemDelegate.cpp

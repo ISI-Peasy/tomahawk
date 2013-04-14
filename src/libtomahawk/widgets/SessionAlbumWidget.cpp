@@ -20,19 +20,26 @@
  */
 
 #include "SessionAlbumWidget.h"
+#include "../playlist/SessionHistoryModel.h"
 #include "ui_SessionAlbumWidget.h"
 #include "playlist/RecentlyPlayedModel.h"
+
+using namespace Tomahawk;
 
 SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SessionAlbumWidget)
 {
     ui->setupUi(this);
-//    m_tracksModel = new RecentlyPlayedModel( ui->listView );
-//    ui->listView->proxyModel()->setStyle( PlayableProxyModel::ShortWithAvatars );
-//    ui->listView->overlay()->setEnabled( false );
-//    ui->listView->setPlaylistModel( m_tracksModel );
-//    m_tracksModel->setSource( source_ptr() );
+    m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
+
+    //m_sessionsModel = new RecentlyPlayedModel( ui->sessionsView );
+    //ui->sessionsView->proxyModel()->setStyle( PlayableProxyModel::ShortWithAvatars );
+    //ui->sessionsView->overlay()->setEnabled( false );
+    //ui->sessionsView->setPlaylistModel( m_tracksModel );
+    m_sessionsModel->setSource( source_ptr() );
+
+    // TODO : connecter la view avec le model : SessionHistoryModel ( actuellement copie du RecentlyPlayed mais amené a varier :) )
 }
 
 SessionAlbumWidget::~SessionAlbumWidget()
@@ -58,11 +65,5 @@ bool
 SessionAlbumWidget::jumpToCurrentTrack()
 {
     return false;
-}
-
-void
-SessionAlbumWidget::loadData()
-{
-   // m_recentAlbumsModel->addFilteredCollection( collection_ptr(), 20, DatabaseCommand_AllAlbums::ModificationTime, true );
 }
 

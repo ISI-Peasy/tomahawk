@@ -26,7 +26,7 @@
 #include "PlaylistInterface.h"
 #include "ViewPage.h"
 
-class RecentlyPlayedModel;
+class SessionHistoryModel;
 
 namespace Ui {
     class SessionAlbumWidget;
@@ -59,10 +59,10 @@ public:
 
     virtual bool jumpToCurrentTrack();
 
-    void loadData();
     
 private:
     Ui::SessionAlbumWidget *ui;
+    SessionHistoryModel *m_sessionsModel ;
     Tomahawk::playlistinterface_ptr m_playlistInterface;
     RecentlyPlayedModel* m_tracksModel;
 };
