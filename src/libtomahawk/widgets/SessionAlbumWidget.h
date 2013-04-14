@@ -24,6 +24,7 @@
 
 #include <QWidget>
 #include "PlaylistInterface.h"
+#include <QStyledItemDelegate>
 #include "ViewPage.h"
 
 class SessionHistoryModel;
@@ -38,6 +39,17 @@ namespace Tomahawk
     class ChartsPlaylistInterface;
     class ChartDataLoader;
 }
+
+class DLLEXPORT SessionDelegate : public QStyledItemDelegate
+{
+Q_OBJECT
+
+public:
+    SessionDelegate(){}
+protected:
+    void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+    QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+};
 
 
 class SessionAlbumWidget : public QWidget, public Tomahawk::ViewPage
@@ -59,7 +71,9 @@ public:
 
     virtual bool jumpToCurrentTrack();
 
-    
+public slots:
+    void loadData();
+
 private:
     Ui::SessionAlbumWidget *ui;
     SessionHistoryModel *m_sessionsModel ;

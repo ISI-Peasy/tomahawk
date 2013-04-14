@@ -256,7 +256,7 @@ SessionHistoryModel::feedModelWithSessions ( const QList< QPair< QString, QList<
         for( int i = 0 ; i < sessions.count() ; i++ )
         {
             aSession = sessions.at(i) ;
-            if(!aSession.first.isNull()) m_sessionslist << aSession ;
+            if(!aSession.first.isNull() && aSession.second.count()) m_sessionslist << aSession ;
         }
     }
     endResetModel();
@@ -268,7 +268,12 @@ QVariant SessionHistoryModel::data( const QModelIndex& index, int role ) const
         return QVariant();
 
     if (role == Qt::DisplayRole)
-        return m_sessionslist.at(index.row()).first;
+    {
+        //
+        QString source = m_sessionslist.at(index.row()).second.at(0)->playedBy().first->friendlyName() ;
+        QString sessionLabel = m_sessionslist.at(index.row()).first ;
+        return (source +" 'session : "+ sessionLabel) ;
+    }
     else
         return QVariant();
 }
