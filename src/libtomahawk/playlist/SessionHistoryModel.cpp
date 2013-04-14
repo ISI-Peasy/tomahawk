@@ -277,3 +277,4 @@ int SessionHistoryModel::rowCount( const QModelIndex& ) const
 {
     return m_sessionslist.count() ;
 }
+

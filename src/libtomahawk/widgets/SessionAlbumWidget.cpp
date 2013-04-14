@@ -31,11 +31,8 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
     ui(new Ui::SessionAlbumWidget)
 {
     ui->setupUi(this);
-
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
     //ui->sessionsView->setItemDelegate( new PlaylistDelegate() ); TODO : Delegate
-    //ui->sessionsView->overlay()->resize( 380, 86 );
-    //ui->sessionsView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
     ui->sessionsView->setModel( m_sessionsModel );
     m_sessionsModel->setSource( source_ptr() );
 }
