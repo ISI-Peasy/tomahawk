@@ -24,11 +24,13 @@
 #include <QHash>
 
 #include "Typedefs.h"
+#include <QModelIndex>
 #include "PlaylistModel.h"
 
 #include "DllMacro.h"
 
-class DLLEXPORT SessionHistoryModel : public PlaylistModel
+
+class DLLEXPORT SessionHistoryModel : public QAbstractListModel
 {
 Q_OBJECT
 
@@ -36,28 +38,30 @@ public:
     explicit SessionHistoryModel( QObject* parent = 0 );
     ~SessionHistoryModel();
 
+    virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+    virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
+
     unsigned int limit() const { return m_limit; }
     void setLimit( unsigned int limit ) { m_limit = limit; }
-
-    bool isTemporary() const;
 
 public slots:
     void setSource( const Tomahawk::source_ptr& source );
 
 private slots:
-    void onSourcesReady();
+    void onSourcesReady(); // PlaylistModel
     void onSourceAdded( const Tomahawk::source_ptr& source );
-
     void onPlaybackFinished( const Tomahawk::query_ptr& query );
-    void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
-    void loadHistory();
-    void retrievePlayBackSongs() ;
-    void retrieveLovedSongs() ;
 
+    void loadHistory();
+    void retrieveLovedSongs() ;
+    void retrievePlayBackSongs() ;
+    void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
+    void feedModelWithSessions ( const QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions) ;
 
 private:
-    Tomahawk::source_ptr m_source;
     unsigned int m_limit;
+    Tomahawk::source_ptr m_source;
+    QList< QPair< QString, QList< Tomahawk::query_ptr > > > m_sessionslist ;
 };
 
 #endif // SESSIONHISTORYMODEL_H

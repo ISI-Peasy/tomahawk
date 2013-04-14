@@ -64,7 +64,6 @@ private:
     Ui::SessionAlbumWidget *ui;
     SessionHistoryModel *m_sessionsModel ;
     Tomahawk::playlistinterface_ptr m_playlistInterface;
-    RecentlyPlayedModel* m_tracksModel;
 };
 
 #endif // SESSIONALBUMWIDGET_H

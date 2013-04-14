@@ -31,15 +31,13 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
     ui(new Ui::SessionAlbumWidget)
 {
     ui->setupUi(this);
+
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
-
-    //m_sessionsModel = new RecentlyPlayedModel( ui->sessionsView );
-    //ui->sessionsView->proxyModel()->setStyle( PlayableProxyModel::ShortWithAvatars );
-    //ui->sessionsView->overlay()->setEnabled( false );
-    //ui->sessionsView->setPlaylistModel( m_tracksModel );
+    //ui->sessionsView->setItemDelegate( new PlaylistDelegate() ); TODO : Delegate
+    //ui->sessionsView->overlay()->resize( 380, 86 );
+    //ui->sessionsView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
+    ui->sessionsView->setModel( m_sessionsModel );
     m_sessionsModel->setSource( source_ptr() );
-
-    // TODO : connecter la view avec le model : SessionHistoryModel ( actuellement copie du RecentlyPlayed mais amené a varier :) )
 }
 
 SessionAlbumWidget::~SessionAlbumWidget()

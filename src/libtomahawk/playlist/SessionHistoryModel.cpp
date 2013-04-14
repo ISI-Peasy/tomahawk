@@ -31,16 +31,17 @@
 #include "utils/TomahawkUtils.h"
 #include "utils/Logger.h"
 
-#define HISTORY_TRACK_ITEMS 25
+#define HISTORY_SESSION_ITEMS 10
 
-const static int MAX_TIME_BETWEEN_TRACKS = 5 * 60 * 60;
+const static int MAX_TIME_BETWEEN_TRACKS = 10 * 60 * 60;
 
 using namespace Tomahawk;
 
 
 SessionHistoryModel::SessionHistoryModel( QObject* parent )
-    : PlaylistModel( parent )
-    , m_limit( HISTORY_TRACK_ITEMS )
+    //: PlaylistModel( parent )
+      : QAbstractListModel( parent )
+    , m_limit( HISTORY_SESSION_ITEMS )
 {
 }
 
@@ -49,22 +50,17 @@ SessionHistoryModel::~SessionHistoryModel()
 {
 }
 
-
 void
 SessionHistoryModel::loadHistory()
 {
     if ( rowCount( QModelIndex() ) )
     {
-        clear();
+       // beginResetModel(); // usefull ?
     }
-    startLoading();
+    //startLoading(); // usefull ?
 
-    // Retrieve Data from DB and pass it out to session builder
     retrievePlayBackSongs() ;
     retrieveLovedSongs();
-
-    // TODO get the return from the session maker ! slot&co
-
 }
 
 void
@@ -154,40 +150,7 @@ SessionHistoryModel::onSourceAdded( const Tomahawk::source_ptr& source )
 void
 SessionHistoryModel::onPlaybackFinished( const Tomahawk::query_ptr& query )
 {
-    int count = trackCount();
-    unsigned int playtime = query->playedBy().second;
-
-    if ( count )
-    {
-        PlayableItem* oldestItem = itemFromIndex( index( count - 1, 0, QModelIndex() ) );
-        if ( oldestItem->query()->playedBy().second >= playtime )
-            return;
-
-        PlayableItem* youngestItem = itemFromIndex( index( 0, 0, QModelIndex() ) );
-        if ( youngestItem->query()->playedBy().second <= playtime )
-            insertQuery( query, 0 );
-        else
-        {
-            for ( int i = 0; i < count - 1; i++ )
-            {
-                PlayableItem* item1 = itemFromIndex( index( i, 0, QModelIndex() ) );
-                PlayableItem* item2 = itemFromIndex( index( i + 1, 0, QModelIndex() ) );
-
-                if ( item1->query()->playedBy().second >= playtime && item2->query()->playedBy().second <= playtime )
-                {
-                    insertQuery( query, i + 1 );
-                    break;
-                }
-            }
-        }
-    }
-    else
-        insertQuery( query, 0 );
-
-    if ( trackCount() > (int)m_limit )
-        remove( m_limit );
-
-    ensureResolved();
+    //TODO
 }
 
 void
@@ -197,127 +160,73 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
 
     if ( !queries.count() )
     {
-        emit itemCountChanged( rowCount( QModelIndex() ) );
-        finishLoading();
+        //emit itemCountChanged( rowCount( QModelIndex() ) ); // TODO : Replace
+        //finishLoading(); // TODO : Replace
         return;
     }
     else tDebug() << "Session Calculate starting" ;
 
-    QMap< QString, QList< Tomahawk::query_ptr > > queriesFromSources = QMap< QString, QList< Tomahawk::query_ptr > >();
-
-    //first, fetching according to the source
-    for( int i = 0 ; i < queries.count() ; i++ )
-    {
-        Tomahawk::query_ptr ptr_q = queries.at( i );
-        Tomahawk::Query *query = ptr_q.data();
-        QString currentSource = query->playedBy().first->friendlyName();
-
-        if( !queriesFromSources.contains( currentSource ) )
-        {
-            queriesFromSources.insert( currentSource, QList< Tomahawk::query_ptr >() );
-        }
-        queriesFromSources[ currentSource ] << ptr_q;
-    }
+    tDebug() << "Number of Queries retireved" <<queries.count() ;
 
     QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions = QList< QPair< QString, QList< Tomahawk::query_ptr> > >();
-
     QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
     aSession.second = QList< Tomahawk::query_ptr >();
 
-    QList< QString > aSessionArtists;
+    QList< QString > aSessionArtists = QList< QString >();
     QString currentArtist;
     int currentArtistOccurs;
 
-    QMapIterator< QString, QList< Tomahawk::query_ptr > > it_sources( queriesFromSources );
-    while ( it_sources.hasNext() )
+    unsigned int lastTimeStamp = 0;
+    // TODO : sort peers
+
+    for( int i = 0 ; i < queries.count() ; i++ ) // TODO : check duplicate inside queries to erase it
     {
-        it_sources.next();
-        tDebug() << "Calculating sessions from " << it_sources.key();
+        Tomahawk::query_ptr ptr_q = queries.at( i );
+        Tomahawk::Query *query = ptr_q.data();
 
-        //init of iteration vars
-        aSessionArtists = QList< QString >();
-        currentArtist = QString();
-        currentArtistOccurs = 0;
-        unsigned int lastTimeStamp = 0;
-
-        for( int i = 0 ; i < it_sources.value().count() ; i++ ) // TODO : check duplicate inside queries for the same session to erase it
+        if( lastTimeStamp == 0 )
         {
-            Tomahawk::query_ptr ptr_q = it_sources.value().at( i );
-            Tomahawk::Query *query = ptr_q.data();
+            lastTimeStamp = query->playedBy().second;
+        }
 
-            tDebug() << "   session query " << i << " : " << query->artist() << query->track() << " ~ " << query->playedBy().first->friendlyName() << " ~ " << query->playedBy().second;
-
-            if( lastTimeStamp == 0 )
+        //TODO: enhancement : use the duration to calculate better the sessions
+        if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS )
+        {
+            //it's the same session, we add it
+            aSession.second << ptr_q;
+            aSessionArtists << query->artist();
+        }
+        else
+        {
+            //calculate the most recurent artist of the session
+            currentArtist = QString();
+            currentArtistOccurs = 0;
+            for( int ca = 0; ca < aSessionArtists.count(); ca++ )
             {
-                lastTimeStamp = query->playedBy().second;
-            }
-
-            //TODO: enhancement : use the duration to calculate better the sessions
-            if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS )
-            {
-                //it's the same session, we add it
-                aSession.second << ptr_q;
-                aSessionArtists << query->artist();
-                tDebug() << "       added to session " << ( sessions.count() + 1 );
-            }
-            else
-            {
-                //calculate the most recurent artist of the session
-                currentArtist = QString();
-                currentArtistOccurs = 0;
-                for( int ca = 0; ca < aSessionArtists.count(); ca++ )
+                if( aSessionArtists.count( aSessionArtists.at(ca) ) > currentArtistOccurs )
                 {
-                    if( aSessionArtists.count( aSessionArtists.at(ca) ) > currentArtistOccurs )
-                    {
-                        currentArtist =  aSessionArtists.at(ca);
-                        currentArtistOccurs = aSessionArtists.count( aSessionArtists.at(ca) );
-                    }
+                    currentArtist =  aSessionArtists.at(ca);
+                    currentArtistOccurs = aSessionArtists.count( aSessionArtists.at(ca) );
                 }
-
-                aSessionArtists = QList< QString >();
-
-                //add the curent session to the session list
-                aSession.first = currentArtist;
-
-                sessions << aSession;
-                tDebug() << "session " << ( sessions.count() ) << " aded to session list";
-
-                //new session
-                aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
-                //add the current query in the new session
-                aSession.second << ptr_q;
-                aSessionArtists << query->artist();
-                tDebug() << "       added to new session " << ( sessions.count() + 1 );
             }
 
-            lastTimeStamp = query->playedBy().second + query->duration();
+            aSessionArtists = QList< QString >();
 
+            //add the curent session to the session list
+            aSession.first = currentArtist;
 
+            sessions << aSession;
+            //new session
+            aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+            //add the current query in the new session
+            aSession.second << ptr_q;
+            aSessionArtists << query->artist();
         }
 
-        //calculate the most recurent artist of the last session
-        currentArtist = QString();
-        currentArtistOccurs = 0;
-        for( int ca = 0; ca < aSessionArtists.count(); ca++ )
-        {
-            if( aSessionArtists.count( aSessionArtists.at(ca) ) > currentArtistOccurs )
-            {
-                currentArtist =  aSessionArtists.at(ca);
-                currentArtistOccurs = aSessionArtists.count( aSessionArtists.at(ca) );
-            }
-        }
+        lastTimeStamp = query->playedBy().second;
 
-        aSessionArtists = QList< QString >();
-
-        //add the last session to the session list
-        aSession.first = currentArtist;
-
-        sessions << aSession;
-        tDebug() << "last session nb " << ( sessions.count() ) << " aded to session list";
+      //  tDebug() << "~~~~ session query " << i << " : " << query->toString() << " ~ " << query->playedBy().first << " ~ " << query->playedBy().second;
     }
-
-
-
     //debug : show sessions
     tDebug() << "We have calculate " << sessions.count() << " sessions :";
     for( int i = 0 ; i < sessions.count() ; i++ )
@@ -329,12 +238,42 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
             tDebug() << "   - " << track->artist() << track->track() << " from " << track->playedBy().first->friendlyName() << " played at " << track->playedBy().second ;
         };
     }
-    // TODO : find a way of return : emit or return ? to feed the model
+    // TODO : find a proper way of return : emit or return ? to feed the model
+    feedModelWithSessions(sessions) ;
+
 }
 
-
-bool
-SessionHistoryModel::isTemporary() const
+void
+//SessionHistoryModel::feedModelWithQueries ( const QPair< QString, QList< Tomahawk::query_ptr > > &  aSession)
+SessionHistoryModel::feedModelWithSessions ( const QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions)
 {
-    return true;
+    if (sessions.count()) // TODO : add tracks as child of the session name
+    {
+        beginResetModel();
+        m_sessionslist.clear();
+        QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+
+        for( int i = 0 ; i < sessions.count() ; i++ )
+        {
+            aSession = sessions.at(i) ;
+            if(!aSession.first.isNull()) m_sessionslist << aSession ;
+        }
+    }
+    endResetModel();
+}
+
+QVariant SessionHistoryModel::data( const QModelIndex& index, int role ) const
+{
+    if( !index.isValid() || !hasIndex( index.row(), index.column(), index.parent() ) )
+        return QVariant();
+
+    if (role == Qt::DisplayRole)
+        return m_sessionslist.at(index.row()).first;
+    else
+        return QVariant();
+}
+
+int SessionHistoryModel::rowCount( const QModelIndex& ) const
+{
+    return m_sessionslist.count() ;
 }
