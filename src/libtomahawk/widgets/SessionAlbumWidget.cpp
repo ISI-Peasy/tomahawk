@@ -41,7 +41,7 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
 
     //ui->sessionsView->setItemDelegate( new PlaylistDelegate() ); TODO : Delegate
     ui->sessionsView->setModel( m_sessionsModel );
-    ui->sessionsView->setItemDelegate( new SessionDelegate() );
+    //ui->sessionsView->setItemDelegate( new SessionDelegate() );
     m_sessionsModel->setSource( source_ptr() );
 }
 
