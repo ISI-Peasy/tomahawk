@@ -133,11 +133,7 @@ void SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& opti
     painter->drawPixmap( r, avatar );
 
     painter->setFont( font );
-//     RecentlyPlayedPlaylistsModel::PlaylistTypes type = (RecentlyPlayedPlaylistsModel::PlaylistTypes)index.data( RecentlyPlayedPlaylistsModel::PlaylistTypeRole ).toInt();
-//    QString author = index.data( RecentlyPlayedPlaylistsModel::PlaylistRole ).value< Tomahawk::playlist_ptr >()->author()->friendlyName();
-//    if ( author.indexOf( '@' ) > 0 )
-//        author = author.mid( 0, author.indexOf( '@' ) );
-    QString author = "auteur";
+    QString author = index.data( SessionHistoryModel::SourceRole).toString();
 
     const int w = painter->fontMetrics().width( author ) + 2;
     QRect avatarNameRect( opt.rect.width() - 10 - w, r.bottom(), w, opt.rect.bottom() - r.bottom() );
@@ -145,8 +141,8 @@ void SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& opti
 
     const int leftEdge = opt.rect.width() - qMin( avatarNameRect.left(), r.left() );
     QString descText;
-//    descText = index.data( SessionHistoryModel::ArtistRole ).toString();
-    descText = "description text";
+    descText = TomahawkUtils::ageToString( QDateTime::fromTime_t(index.data(SessionHistoryModel::PlaytimeRole).value< unsigned int>()), true );
+//    descText = "session écoutée il y a " + index.data( SessionHistoryModel::PlaytimeRole ).toString();
 
     QColor c = painter->pen().color();
     if ( !( option.state & QStyle::State_Selected && option.state & QStyle::State_Active ) )
@@ -166,7 +162,7 @@ void SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& opti
     painter->setFont( font );
 
     painter->setFont( boldFont );
-    painter->drawText( option.rect.adjusted( option.fontMetrics.height() * 4, 6, -100, -option.rect.height() + boldFontMetrics.height() + 6 ), index.data().toString() );
+    painter->drawText( option.rect.adjusted( option.fontMetrics.height() * 4, 6, -100, -option.rect.height() + boldFontMetrics.height() + 6 ), index.data(SessionHistoryModel::SessionRole).toString() );
 
     painter->restore();
 }

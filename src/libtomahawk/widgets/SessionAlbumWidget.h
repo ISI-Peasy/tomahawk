@@ -62,7 +62,7 @@ public:
     virtual QWidget* widget() { return this; }
     virtual Tomahawk::playlistinterface_ptr playlistInterface() const;
 
-    virtual QString title() const { return tr( "New Releases" ); }
+    virtual QString title() const { return tr( "Sessions" ); }
     virtual QString description() const { return QString(); }
 
     virtual bool showInfoBar() const { return false; }

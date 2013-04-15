@@ -347,7 +347,7 @@ QVariant SessionHistoryModel::data( const QModelIndex& index, int role ) const
     }
     case PlaytimeRole:
     {
-        return mySession.second.at(0)->playedBy().second ;
+        return QVariant::fromValue(mySession.second.at(0)->playedBy().second );
     }
     default:
         return QVariant();
