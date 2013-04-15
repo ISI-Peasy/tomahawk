@@ -151,7 +151,7 @@ SessionHistoryModel::onSourceAdded( const Tomahawk::source_ptr& source )
 void
 SessionHistoryModel::onPlaybackFinished( const Tomahawk::query_ptr& query )
 {
-    //TODO
+    loadHistory();
 }
 
 
