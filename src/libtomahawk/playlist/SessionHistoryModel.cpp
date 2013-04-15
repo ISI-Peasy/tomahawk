@@ -34,6 +34,7 @@
 #define HISTORY_SESSION_ITEMS 100
 
 const static int MAX_TIME_BETWEEN_TRACKS = 10 * 60 * 60;
+const static int MIN_SESSION_COUNT = 5;
 
 using namespace Tomahawk;
 
@@ -246,8 +247,12 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
                 //add the curent session to the session list
                 aSession.first = currentArtist;
 
-                sessions << aSession;
-                //tDebug() << "session " << ( sessions.count() ) << " aded to session list";
+                //add the current session in the session list only if session contains MIN_SESSION_COUNT at least
+                if( aSession.second.count() >= MIN_SESSION_COUNT )
+                {
+                    sessions << aSession;
+                    //tDebug() << "session " << ( sessions.count() ) << " aded to session list";
+                }
 
                 //new session
                 aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
@@ -276,8 +281,12 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         //add the last session to the session list
         aSession.first = currentArtist;
 
-        sessions << aSession;
-        //tDebug() << "last session nb " << ( sessions.count() ) << " aded to session list";
+        //add the last session in the session list only if session contains MIN_SESSION_COUNT at least
+        if( aSession.second.count() >= MIN_SESSION_COUNT )
+        {
+            sessions << aSession;
+            //tDebug() << "last session nb " << ( sessions.count() ) << " aded to session list";
+        }
     }
 
     // insert the sessions inside the model
