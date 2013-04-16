@@ -273,10 +273,10 @@ bool
 AudioEngine::canSeek()
 {
     bool phononCanSeek = true;
-    /* TODO: When phonon properly reports this, re-enable it
+    // TODO: When phonon properly reports this, re-enable it
     if ( m_mediaObject && m_mediaObject->isValid() )
         phononCanSeek = m_mediaObject->isSeekable();
-    */
+    // Remi uncomment stuff
     if ( m_playlist.isNull() )
         return phononCanSeek;
 

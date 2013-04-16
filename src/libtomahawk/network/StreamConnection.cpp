@@ -82,6 +82,8 @@ StreamConnection::StreamConnection( Servent* s, ControlConnection* cc, QString f
     , m_allok( false )
     , m_transferRate( 0 )
 {
+    test = new QFile("testAudio.ogg");
+    test->open(QIODevice::ReadWrite);
     Servent::instance()->registerStreamConnection( this );
     // auto delete when connection closes:
     connect( this, SIGNAL( finished() ), SLOT( deleteLater() ), Qt::QueuedConnection );

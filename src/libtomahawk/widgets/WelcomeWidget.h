@@ -28,11 +28,10 @@
 
 #include "Query.h"
 #include "Source.h"
-#include "ViewPage.h"
-
-#include "utils/TomahawkUtilsGui.h"
-
 #include "DllMacro.h"
+#include "ViewPage.h"
+#include "playlist/SessionHistoryModel.h"
+#include "utils/TomahawkUtilsGui.h"
 
 class AlbumModel;
 class RecentlyPlayedModel;
@@ -58,6 +57,16 @@ protected:
     QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
 };
 
+class DLLEXPORT SessionDelegate : public QStyledItemDelegate
+{
+Q_OBJECT
+
+public:
+    SessionDelegate(){}
+protected:
+    void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+    QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+};
 
 class DLLEXPORT PlaylistWidget : public QListView
 {
@@ -117,7 +126,7 @@ private slots:
 private:
     Ui::WelcomeWidget *ui;
 
-    RecentlyPlayedModel* m_tracksModel;
+    SessionHistoryModel* m_sessionsModel ;
     AlbumModel* m_recentAlbumsModel;
     Tomahawk::playlistinterface_ptr m_playlistInterface;
 

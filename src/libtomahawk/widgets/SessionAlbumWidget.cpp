@@ -39,7 +39,7 @@ SessionAlbumWidget::SessionAlbumWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
-    ui->sessionsView->setItemDelegate( new SessionDelegate() );
+    //ui->sessionsView->setItemDelegate( new SessionDelegate() );
     ui->sessionsView->setModel( m_sessionsModel );
     m_sessionsModel->setSource( source_ptr() );
 
@@ -89,7 +89,7 @@ SessionAlbumWidget::jumpToCurrentTrack()
 }
 
 // Delegate part :
-
+/*
 void SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
     QStyleOptionViewItemV4 opt = option;
@@ -184,3 +184,4 @@ QSize SessionDelegate::sizeHint( const QStyleOptionViewItem& option, const QMode
 
     return QSize( 0, height );
 }
+*/
