@@ -87,6 +87,7 @@ public:
     unsigned int albumpos() const { return m_albumpos; }
     unsigned int modificationTime() const { return m_modtime; }
     int year() const { return m_year; }
+    bool toConvert() const { return m_toConvert; }
     unsigned int discnumber() const { return m_discnumber; }
 
     void setScore( float score ) { m_score = score; }
@@ -108,6 +109,8 @@ public:
     void setAlbumPos( unsigned int albumpos ) { m_albumpos = albumpos; }
     void setModificationTime( unsigned int modtime ) { m_modtime = modtime; }
     void setYear( unsigned int year ) { m_year = year; }
+    void setToConvert( bool toConvert ) { m_toConvert = toConvert; }
+
     void setDiscNumber( unsigned int discnumber ) { m_discnumber = discnumber; }
 
     QVariantMap attributes() const { return m_attributes; }
@@ -164,6 +167,8 @@ private:
 
     QVariantMap m_attributes;
     unsigned int m_trackId, m_fileId;
+
+    bool m_toConvert;
 };
 
 } //ns

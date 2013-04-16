@@ -28,21 +28,24 @@
 #include "Writer.h"
 
 class QString;
+class QIODevice;
 class QByteArray;
 struct VorbisWriterPrivateData;
 
 class VorbisWriter : public AudioFileWriter {
 public:
-    VorbisWriter();
+    VorbisWriter( QIODevice* );
+    VorbisWriter( QByteArray* );
     virtual ~VorbisWriter();
 
-    virtual bool open(const QString& , long, bool, int quality = 10);
+    virtual bool open( long, bool, int quality = 10 );
     virtual void close();
     virtual bool write(const qint16*, const qint16*, long, bool = false);
 
 private:
     VorbisWriterPrivateData *pd;
     bool hasFlushed;
+    QByteArray* m_array;
 };
 
 #endif

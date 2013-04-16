@@ -129,10 +129,12 @@ public:
 
     QList< StreamConnection* > streams() const { return m_scsessions; }
 
-    QSharedPointer< QIODevice > getIODeviceForUrl( const Tomahawk::result_ptr& result );
-    void registerIODeviceFactory( const QString &proto, boost::function< QSharedPointer< QIODevice >(Tomahawk::result_ptr) > fac );
-    QSharedPointer< QIODevice > localFileIODeviceFactory( const Tomahawk::result_ptr& result );
-    QSharedPointer< QIODevice > httpIODeviceFactory( const Tomahawk::result_ptr& result );
+    void getIODeviceForUrl( const Tomahawk::result_ptr& result, boost::function< void ( QSharedPointer< QIODevice >& ) > callback );
+    void registerIODeviceFactory( const QString &proto, IODeviceFactoryFunc fac );
+    void remoteIODeviceFactory( const Tomahawk::result_ptr& result, boost::function< void ( QSharedPointer< QIODevice >& ) > callback );
+    void localFileIODeviceFactory( const Tomahawk::result_ptr& result, boost::function< void ( QSharedPointer< QIODevice >& ) > callback );
+    void convertLocalFileIODeviceFactory( const Tomahawk::result_ptr &result, boost::function<void (QSharedPointer<QIODevice> &)> callback );
+    void httpIODeviceFactory( const Tomahawk::result_ptr& result, boost::function< void ( QSharedPointer< QIODevice >& ) > callback );
 
     bool isReady() const { return m_ready; };
 

@@ -25,24 +25,28 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QFile>
+
+#include <QIODevice>
 #include <QString>
 #include <QMap>
+#include <QByteArray>
 
 #include "utils/Logger.h"
 
 #include "Writer.h"
 
-AudioFileWriter::AudioFileWriter() :
-	sampleRate(0),
-	stereo(false),
-	samplesWritten(0),
-    mustWriteTags(true),
-    m_tagComment(QMap<QString, QString>())
+AudioFileWriter::AudioFileWriter( QIODevice* output ) :
+    m_sampleRate( 0 ),
+    m_stereo( false ),
+    m_samplesWritten( 0 ),
+    m_mustWriteTags( true ),
+    m_tagComment( QMap<QString, QString>() ),
+    m_stream( output)
 {
 }
 
 AudioFileWriter::~AudioFileWriter() {
-	if (file.isOpen()) {
+    if (m_stream->isOpen()) {
         tDebug()  << "WARNING: AudioFileWriter::~AudioFileWriter(): File has not been closed, closing it now";
 		close();
 	}
@@ -53,30 +57,21 @@ void AudioFileWriter::addTag(const QString &tagName, const QString &tagValue)
     m_tagComment[tagName] = tagValue;
 }
 
-bool AudioFileWriter::open( const QString& fn, long sr, bool s)
+bool AudioFileWriter::open(long sampleRate, bool stereo)
 {
-    QFileInfo fi(fn);
+    m_sampleRate = sampleRate;
+    m_stereo = stereo;
 
-    bool b = fi.absoluteDir().mkpath(fi.absolutePath());
-	if (!b)
-		return false;
-
-    file.setFileName(fn);
-	sampleRate = sr;
-	stereo = s;
-
-    tDebug()  << QString("Opening '%1'").arg(file.fileName());
-
-	return file.open(QIODevice::WriteOnly);
+    return m_stream->open(QIODevice::ReadWrite | QIODevice::Append);
 }
 
 void AudioFileWriter::close() {
-	if (!file.isOpen()) {
+    if (!m_stream->isOpen()) {
         tDebug()  << "WARNING: AudioFileWriter::close() called, but file not open";
 		return;
 	}
 
-    tDebug()  << QString("Closing '%1', wrote %2 samples, %3 seconds").arg(file.fileName()).arg(samplesWritten).arg(samplesWritten / sampleRate);
-	return file.close();
+    //tDebug()  << QString("Closing '%1', wrote %2 samples, %3 seconds").arg(stream.fileName()).arg(samplesWritten).arg(samplesWritten / sampleRate);
+    return m_stream->close();
 }
 
