@@ -31,6 +31,7 @@
 // it never happens.
 
 #include <QFile>
+#include <QBuffer>
 #include <QByteArray>
 #include <QString>
 #include <cstdlib>
@@ -51,14 +52,23 @@ struct VorbisWriterPrivateData {
 	vorbis_block vb;
 };
 
-VorbisWriter::VorbisWriter() :
+VorbisWriter::VorbisWriter( QIODevice* ouput) :
+    AudioFileWriter(ouput),
 	pd(NULL),
 	hasFlushed(false)
 {
 }
 
+VorbisWriter::VorbisWriter(QByteArray *a):
+    AudioFileWriter(new QFile("rien")),
+    pd(NULL),
+    hasFlushed(false),
+    m_array(a )
+{
+}
+
 VorbisWriter::~VorbisWriter() {
-	if (file.isOpen()) {
+    if (m_stream->isOpen()) {
         tDebug()  << "WARNING: VorbisWriter::~VorbisWriter(): File has not been closed, closing it now";
 		close();
 	}
@@ -74,15 +84,18 @@ VorbisWriter::~VorbisWriter() {
 }
 
 bool
-VorbisWriter::open ( const QString &fn, long sr, bool s, int quality ) {
-    bool b = AudioFileWriter::open( fn, sr, s );
-
-	if (!b) return false;
+VorbisWriter::open ( long sampleRate, bool stereo, int quality )
+{
+    if ( !AudioFileWriter::open( sampleRate, stereo ) )
+    {
+        tDebug() << "Failed to open stream for conversion";
+        return false;
+    }
 
 	pd = new VorbisWriterPrivateData;
 	vorbis_info_init(&pd->vi);
 
-	if (vorbis_encode_init_vbr(&pd->vi, stereo ? 2 : 1, sampleRate, (float)quality / 10.0f) != 0) {
+	if (vorbis_encode_init_vbr(&pd->vi, m_stereo ? 2 : 1, m_sampleRate, (float)quality / 10.0f) != 0) {
 		delete pd;
 		pd = NULL;
 		return false;
@@ -108,25 +121,27 @@ VorbisWriter::open ( const QString &fn, long sr, bool s, int quality ) {
 	std::srand(std::time(NULL));
 	ogg_stream_init(&pd->os, std::rand());
 
-	ogg_packet header;
-	ogg_packet header_comm;
-	ogg_packet header_code;
+    ogg_packet header;
+    ogg_packet header_comm;
+    ogg_packet header_code;
 
-	vorbis_analysis_headerout(&pd->vd, &pd->vc, &header, &header_comm, &header_code);
-	ogg_stream_packetin(&pd->os, &header);
-	ogg_stream_packetin(&pd->os, &header_comm);
-	ogg_stream_packetin(&pd->os, &header_code);
+    vorbis_analysis_headerout(&pd->vd, &pd->vc, &header, &header_comm, &header_code);
+    ogg_stream_packetin(&pd->os, &header);
+    ogg_stream_packetin(&pd->os, &header_comm);
+    ogg_stream_packetin(&pd->os, &header_code);
 
-	while (ogg_stream_flush(&pd->os, &pd->og) != 0) {
-		file.write((const char *)pd->og.header, pd->og.header_len);
-		file.write((const char *)pd->og.body, pd->og.body_len);
-	}
+    while (ogg_stream_flush(&pd->os, &pd->og) != 0) {
+        m_stream->write((const char *)pd->og.header, pd->og.header_len);
+        m_stream->write((const char *)pd->og.body, pd->og.body_len);
+//        m_array->append((const char *)pd->og.header, pd->og.header_len);
+//         m_array->append((const char *)pd->og.body, pd->og.body_len);
+    }
 
 	return true;
 }
 
 void VorbisWriter::close() {
-	if (!file.isOpen()) {
+    if (!m_stream->isOpen()) {
         tDebug()  << "WARNING: VorbisWriter::close() called, but file not open";
 		return;
 	}
@@ -144,7 +159,7 @@ bool VorbisWriter::write(const qint16* left, const qint16* right, long samples, 
 	const long maxChunkSize = 4096;
 
     const qint16 *leftData = left;
-    const qint16 *rightData = stereo ? right : NULL;
+    const qint16 *rightData = m_stereo ? right : NULL;
 
 	long todoSamples = samples;
 	int eos = 0;
@@ -165,7 +180,7 @@ bool VorbisWriter::write(const qint16* left, const qint16* right, long samples, 
 				buffer[0][i] = (float)leftData[i] / 32768.0f;
 			leftData += chunkSize;
 
-			if (stereo) {
+			if (m_stereo) {
 				for (long i = 0; i < chunkSize; i++)
 					buffer[1][i] = (float)rightData[i] / 32768.0f;
 				rightData += chunkSize;
@@ -182,9 +197,11 @@ bool VorbisWriter::write(const qint16* left, const qint16* right, long samples, 
 				ogg_stream_packetin(&pd->os, &pd->op);
 
 				while (!eos && ogg_stream_pageout(&pd->os, &pd->og) != 0) {
-                    tDebug() << "Writing header : " << pd->og.header_len << "Sample : " << pd->og.body_len;
-                    tDebug() << "Actually header : " << file.write((const char *)pd->og.header, pd->og.header_len);
-                    tDebug() << "Actually body : " << file.write((const char *)pd->og.body, pd->og.body_len);
+                    tDebug() << "VorbisWriter : writing " << pd->og.header_len;
+                    m_stream->write((const char *)pd->og.header, pd->og.header_len);
+                    m_stream->write((const char *)pd->og.body, pd->og.body_len);
+//                     m_array->append((const char *)pd->og.header, pd->og.header_len);
+//                     m_array->append((const char *)pd->og.body, pd->og.body_len);
 
 					if (ogg_page_eos(&pd->og))
 						eos = 1;
@@ -193,7 +210,7 @@ bool VorbisWriter::write(const qint16* left, const qint16* right, long samples, 
 		}
 	}
 
-	samplesWritten += samples;
+	m_samplesWritten += samples;
 
 	return true;
 }

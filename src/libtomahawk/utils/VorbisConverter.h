@@ -21,6 +21,8 @@
 
 #include <QMap>
 #include <QObject>
+#include <QBuffer>
+#include <QDataStream>
 
 #include <phonon/AudioDataOutput>
 #include <phonon/AudioOutput>
@@ -30,18 +32,27 @@
 #include "utils/vorbiswriter/VorbisWriter.h"
 
 class QFile;
+class QByteArray;
 
-class VorbisConverter : public QObject
+class VorbisConverter : public QIODevice
 {
     Q_OBJECT
 
 public:
-    VorbisConverter( const Tomahawk::query_ptr& query, QObject* parent = 0 );
-    VorbisConverter( Phonon::AudioDataOutput*, QObject* parent = 0 );
-    virtual ~VorbisConverter() {}
+    VorbisConverter( const Tomahawk::result_ptr& result, QObject* parent = 0 );
+    //virtual ~VorbisConverter() {}
 
     void startConversion();
 
+    qint64 readData ( char * data, qint64 maxSize );
+    qint64 writeData ( const char * data, qint64 maxSize );
+
+    qint64 bytesAvailable() const;
+    bool atEnd() const;
+
+    QIODevice* getStream() { return this; }
+    bool seek(qint64 pos);
+    qint64 pos() const;
 public slots:
     void receiveData( const QMap< Phonon::AudioDataOutput::Channel, QVector< qint16 > > &  	data );
     void onEndOfMedia(int remainingSamples);
@@ -54,7 +65,13 @@ private:
 
     VorbisWriter* m_vorbisWriter;
 
+    QByteArray* m_buffer;
+    bool m_atEnd;
     int m_remainingSamples;
+
+    QBuffer* m_stream;
+
+    QFile* test;
 };
 
 #endif // VORBISCONVERTER_H

@@ -18,6 +18,8 @@
 
 #include "VorbisConverter.h"
 
+#include <QBuffer>
+#include <QByteArray>
 #include <QFile>
 #include <vorbis/vorbisenc.h>
 
@@ -39,22 +41,20 @@ using namespace Tomahawk;
 #define DEFAULT_IS_STEREO true
 
 
-VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *parent) : QObject(parent), m_remainingSamples(-1)
+VorbisConverter::VorbisConverter(const Tomahawk::result_ptr& result, QObject *parent) :
+    QIODevice(parent),
+    m_remainingSamples(-1),
+    m_buffer( new QByteArray() ),
+    m_atEnd( false )
 {
-    if ( ! query->numResults() )
-    {
-        tDebug() << "No results to convert";
-        return;
-    }
 
     m_mediaObject = new Phonon::MediaObject( this );
     m_audioOutput = new Phonon::AudioOutput( Phonon::MusicCategory, this );
     m_audioDataOutput = new Phonon::AudioDataOutput( m_mediaObject );
-    m_vorbisWriter = new VorbisWriter();
+    m_stream =  new QBuffer(m_buffer);
+    m_vorbisWriter = new VorbisWriter(this);
 
     Phonon::createPath( m_mediaObject, m_audioDataOutput );
-
-    Tomahawk::result_ptr result = query->results().first();
 
     if ( result->collection() && result->collection()->source()->isLocal() )
     {
@@ -70,23 +70,15 @@ VorbisConverter::VorbisConverter(const Tomahawk::query_ptr& query, QObject *pare
         m_vorbisWriter->addTag("ALBUM", result->album()->name());
         m_vorbisWriter->addTag("TITLE", result->track());
 
-        tDebug() << "Creating new file : " << m_vorbisWriter->open(m_mediaObject->currentSource().mrl().path() + ".ogg", m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO);
+        tDebug() << "opening : " << m_mediaObject->currentSource().mrl().path() ;
+        test = new QFile(m_mediaObject->currentSource().mrl().path() + ".ogg");
+        test->open(ReadWrite);
+        m_stream->open(QBuffer::ReadWrite);
+        m_vorbisWriter->open( m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO , -0.9);
     }
 
     tDebug() << "Data size : " << m_audioDataOutput->dataSize() << " with bitrate : " << m_audioDataOutput->sampleRate();
-}
-
-
-VorbisConverter::VorbisConverter(Phonon::AudioDataOutput* ao, QObject *parent) : QObject(parent)
-{
-    m_audioDataOutput = ao;
-
-    connect(m_audioDataOutput,
-         SIGNAL(dataReady(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)),
-         this,
-         SLOT(receiveData(const QMap<Phonon::AudioDataOutput::Channel, QVector<qint16> >&)));
-    connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
-
+    this->startConversion();
 }
 
 
@@ -97,6 +89,54 @@ VorbisConverter::startConversion()
 
     //m_audioOutput->setVolume(0);
     m_mediaObject->play();
+}
+
+
+//qint64 VorbisConverter::readData(char *data, qint64 maxSize)
+//{
+//    int length = qMin(m_buffer.length(), (int) maxSize);
+//    memcpy(data, m_buffer.constData(), length);
+//    m_buffer.remove(0, length);
+//    test->write(data, length);
+//    return length;
+//}
+
+
+//qint64 VorbisConverter::writeData(const char *data, qint64 maxSize)
+//{
+//    //test->write(data, maxSize);
+//    m_buffer.append(data, maxSize);
+//    return maxSize;
+//}
+
+
+qint64 VorbisConverter::readData(char *data, qint64 maxSize)
+{
+    return m_stream->read(data, maxSize);
+}
+
+
+qint64 VorbisConverter::writeData(const char *data, qint64 maxSize)
+{
+//    char* tmp = new char[maxSize];
+//    memcpy(tmp, data, maxSize);
+//    test->write(tmp, maxSize);
+//    return m_stream->write(tmp, maxSize);
+
+    m_buffer->append(data, maxSize);
+    return maxSize;
+}
+
+
+bool VorbisConverter::seek ( qint64 pos )
+{
+    return m_stream->seek(pos);
+}
+
+
+qint64 VorbisConverter::pos () const
+{
+    return m_stream->pos();
 }
 
 
@@ -125,7 +165,13 @@ VorbisConverter::receiveData(const QMap<Phonon::AudioDataOutput::Channel , QVect
     }
     else
     {
+        qint64 streamSize = m_stream->size();
+        int bufferSize = m_buffer->size();
         m_vorbisWriter->write(left.constData(), right.constData(), sampleSize, flush);
+        if(streamSize != m_stream->size() && bufferSize != m_buffer->size())
+        {
+            tDebug() << "AFTER : array size : "<<m_buffer->size()<<" stream size : " <<m_stream->size()<<" pos : "<<m_stream->pos();
+        }
     }
 }
 
@@ -138,6 +184,20 @@ VorbisConverter::onEndOfMedia(int remainingSamples)
 }
 
 
+qint64
+VorbisConverter::bytesAvailable() const
+{
+    return m_buffer->size() + QIODevice::bytesAvailable();
+}
+
+
+bool
+VorbisConverter::atEnd () const
+{
+    return m_atEnd;
+}
+
+
 void
 VorbisConverter::onStateChanged( Phonon::State newState, Phonon::State oldState )
 {
@@ -145,7 +205,9 @@ VorbisConverter::onStateChanged( Phonon::State newState, Phonon::State oldState 
 
     if(oldState == Phonon::PlayingState && newState == Phonon::StoppedState)
     {
+        m_atEnd = true;
         m_vorbisWriter->close();
+        test->close();
     }
 
 }
