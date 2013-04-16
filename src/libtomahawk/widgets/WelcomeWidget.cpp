@@ -131,10 +131,8 @@ WelcomeWidget::jumpToCurrentTrack()
 bool
 WelcomeWidget::isBeingPlayed() const
 {
-    if ( ui->additionsView->isBeingPlayed() )
-        return true;
+    return ui->additionsView->isBeingPlayed() ;
 
-    return AudioEngine::instance()->currentTrackPlaylist() == ui->tracksView->playlistInterface();
 }
 
 
