@@ -169,9 +169,6 @@ ContextMenu::setQueries( const QList<Tomahawk::query_ptr>& queries )
     if ( m_supportedActions & ActionDelete )
         m_sigmap->setMapping( addAction( queries.count() > 1 ? tr( "&Remove Items" ) : tr( "&Remove Item" ) ), ActionDelete );
 
-    if ( m_supportedActions & ActionConvertFile && itemCount() == 1 )
-        m_sigmap->setMapping( addAction( tr( "Convert" ) ), ActionConvertFile );
-
     foreach ( QAction* action, actions() )
     {
         connect( action, SIGNAL( triggered() ), m_sigmap, SLOT( map() ) );
@@ -320,14 +317,6 @@ ContextMenu::onTriggered( int action )
             {
                 MetadataEditor* d = new MetadataEditor( m_queries.first(), m_interface, this );
                 d->show();
-            }
-            break;
-
-        case ActionConvertFile:
-            {
-                tDebug() << "Conversion started!";
-                VorbisConverter* vc = new VorbisConverter(m_queries.first());
-                vc->startConversion();
             }
             break;
 
