@@ -32,6 +32,7 @@
 
 #include "DllMacro.h"
 
+class QFile;
 class ControlConnection;
 class BufferIODevice;
 
@@ -96,8 +97,7 @@ private:
     Tomahawk::source_ptr m_source;
     Tomahawk::result_ptr m_result;
     qint64 m_transferRate;
-    
-    QFile* test;
+    QFile* m_test;
 };
 
 #endif // STREAMCONNECTION_H

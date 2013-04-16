@@ -30,12 +30,15 @@
 #include <QString>
 #include <QMap>
 
+class QIODevice;
+//class QFile;
+class QBuffer;
 class QByteArray;
 class QString;
 
 class AudioFileWriter {
 public:
-	AudioFileWriter();
+    AudioFileWriter(QIODevice* );
 	virtual ~AudioFileWriter();
 
 	// tags should be set before open() if possible, but can also be set
@@ -46,19 +49,20 @@ public:
     virtual void addTag(const QString &, const QString &);
 
 	// Note: you're not supposed to reopen after a close
-    virtual bool open( const QString&, long, bool);
+    virtual bool open(long, bool);
 	virtual void close();
     virtual bool write(const qint16*, const qint16*, long, bool = false) = 0;
-	QString fileName() const { return file.fileName(); }
+
+    QIODevice* getStream() { return m_stream; }
 
 protected:
-	QFile file;
-	long sampleRate;
-	bool stereo;
-	qint64 samplesWritten;
+    QIODevice* m_stream;
+    long m_sampleRate;
+    bool m_stereo;
+    qint64 m_samplesWritten;
     QMap<QString,QString> m_tagComment;
-	QDateTime tagTime;
-	bool mustWriteTags;
+    QDateTime m_tagTime;
+    bool m_mustWriteTags;
 
 };
 

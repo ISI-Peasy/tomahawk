@@ -85,6 +85,7 @@ public:
     unsigned int size() const { return m_size; }
     unsigned int modificationTime() const { return m_modtime; }
     int year() const { return m_year; }
+    bool toConvert() const { return m_toConvert; }
 
     void setScore( float score ) { m_score = score; }
     void setTrackId( unsigned int id ) { m_trackId = id; }
@@ -99,6 +100,7 @@ public:
     void setSize( unsigned int size ) { m_size = size; }
     void setModificationTime( unsigned int modtime ) { m_modtime = modtime; }
     void setYear( unsigned int year ) { m_year = year; }
+    void setToConvert( bool toConvert ) { m_toConvert = toConvert; }
 
     void setTrack( const track_ptr& track ) { m_track = track; }
 
@@ -153,6 +155,8 @@ private:
 
     track_ptr m_track;
     query_wptr m_query;
+
+    bool m_toConvert;
 };
 
 } //ns

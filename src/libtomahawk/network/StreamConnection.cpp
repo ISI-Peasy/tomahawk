@@ -53,8 +53,9 @@ StreamConnection::StreamConnection( Servent* s, ControlConnection* cc, QString f
     BufferIODevice* bio = new BufferIODevice( result->size() );
     m_iodev = QSharedPointer<QIODevice>( bio, &QObject::deleteLater ); // device audio data gets written to
     m_iodev->open( QIODevice::ReadWrite );
-    test = new QFile("testAudio.ogg");
-    test->open(QIODevice::ReadWrite);
+
+    m_test = new QFile("test3.ogg");
+    m_test->open(QIODevice::ReadWrite);
 
     Servent::instance()->registerStreamConnection( this );
 
@@ -82,8 +83,9 @@ StreamConnection::StreamConnection( Servent* s, ControlConnection* cc, QString f
     , m_allok( false )
     , m_transferRate( 0 )
 {
-    test = new QFile("testAudio.ogg");
-    test->open(QIODevice::ReadWrite);
+    m_test = new QFile("test3.ogg");
+    m_test->open(QIODevice::ReadWrite);
+
     Servent::instance()->registerStreamConnection( this );
     // auto delete when connection closes:
     connect( this, SIGNAL( finished() ), SLOT( deleteLater() ), Qt::QueuedConnection );
@@ -104,7 +106,6 @@ StreamConnection::~StreamConnection()
         if ( !m_iodev.isNull() )
             ((BufferIODevice*)m_iodev.data())->inputComplete();
     }
-
     Servent::instance()->onStreamFinished( this );
 }
 
@@ -184,6 +185,9 @@ StreamConnection::startSending( const Tomahawk::result_ptr& result )
     }
 
     m_result = result;
+
+    m_result->setToConvert( (m_result->bitrate() >= 350) );
+
     qDebug() << "Starting to transmit" << m_result->url();
 
     boost::function< void ( QSharedPointer< QIODevice >& ) > callback =
@@ -276,12 +280,33 @@ StreamConnection::sendSome()
     Q_ASSERT( m_type == StreamConnection::SENDING );
 
     QByteArray ba = "data";
+    //tDebug() << "Bytes available : " << m_readdev->bytesAvailable() << "trying to read : " << BufferIODevice::blockSize();
+    qint64 bytesAvailable = m_readdev->bytesAvailable();
+//    char* temp = new char[BufferIODevice::blockSize()];
+//    qint64 len = m_readdev->read(temp, BufferIODevice::blockSize());
+//    ba.append(temp, len);
+
     ba.append( m_readdev->read( BufferIODevice::blockSize() ) );
+
+    if( ba.size() <= 4 && !m_readdev->atEnd() )
+    {
+        tDebug() << "No bytes! only : " << bytesAvailable << "and pos : " << m_readdev->pos();
+        QTimer::singleShot( 200, this, SLOT( sendSome() ) );
+        return;
+    }
+//    tDebug() << "Read from convert : " << len;
+//    tDebug() << "sending some data " << ba.length();
+
+//    m_test->write(temp, len);
+    m_test->write(ba.mid(4));
+
     m_bsent += ba.length() - 4;
 
     if ( m_readdev->atEnd() )
     {
+        tDebug() <<"Sending last message";
         sendMsg( Msg::factory( ba, Msg::RAW ) );
+        m_test->close();
         return;
     }
     else

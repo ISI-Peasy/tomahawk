@@ -37,6 +37,7 @@
 #include "utils/TomahawkUtils.h"
 #include "utils/Logger.h"
 #include "accounts/AccountManager.h"
+#include "utils/VorbisConverter.h"
 
 
 #include <QtCore/QCoreApplication>
@@ -47,6 +48,7 @@
 #include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
+#include <QBuffer>
 
 #include <boost/bind.hpp>
 
@@ -1132,6 +1134,12 @@ void
 Servent::localFileIODeviceFactory( const Tomahawk::result_ptr& result,
                                    boost::function< void ( QSharedPointer< QIODevice >& ) > callback )
 {
+    if( result->toConvert() )
+    {
+        this->convertLocalFileIODeviceFactory(result, callback);
+        return ;
+    }
+
     // ignore "file://" at front of url
     QFile* io = new QFile( result->url().mid( QString( "file://" ).length() ) );
     if ( io )
@@ -1154,3 +1162,16 @@ Servent::httpIODeviceFactory( const Tomahawk::result_ptr& result,
     QSharedPointer< QIODevice > sp = QSharedPointer< QIODevice >( reply, &QObject::deleteLater );
     callback( sp );
 }
+
+
+void
+Servent::convertLocalFileIODeviceFactory( const Tomahawk::result_ptr& result,
+                                   boost::function< void ( QSharedPointer< QIODevice >& ) > callback )
+{
+    VorbisConverter* converter = new VorbisConverter( result );
+
+    //boost::functions cannot accept temporaries as parameters
+    QSharedPointer< QIODevice > sp = QSharedPointer<QIODevice>( converter->getStream() );
+    callback( sp );
+}
+
