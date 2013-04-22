@@ -118,9 +118,9 @@ WelcomeWidget::playlistInterface() const
 bool
 WelcomeWidget::jumpToCurrentTrack()
 {
-    if ( ui->tracksView->jumpToCurrentTrack() )
+    /*if ( ui->tracksView->jumpToCurrentTrack() )
         return true;
-
+    */
     if ( ui->additionsView->jumpToCurrentTrack() )
         return true;
 

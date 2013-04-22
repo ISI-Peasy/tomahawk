@@ -72,7 +72,7 @@
         </widget>
        </item>
        <item>
-        <widget class="PlaylistView" name="tracksView"/>
+        <widget class="QListView" name="sessionsView"/>
        </item>
       </layout>
      </widget>
@@ -90,11 +90,6 @@
    <class>GridView</class>
    <extends>QListView</extends>
    <header>playlist/GridView.h</header>
-  </customwidget>
-  <customwidget>
-   <class>PlaylistView</class>
-   <extends>QTreeView</extends>
-   <header>playlist/PlaylistView.h</header>
   </customwidget>
   <customwidget>
    <class>PlaylistWidget</class>
