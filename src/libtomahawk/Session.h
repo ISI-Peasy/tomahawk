@@ -14,7 +14,11 @@ public:
     explicit Session();
     //Session* operator<<( Tomahawk::query_ptr query );
     void addQuery( Tomahawk::query_ptr q );
+    QString getSessionOwner();
     QString getPredominantArtist();
+    QString getPredominantAlbum();
+    int getStartTime();
+    int getEndTime();
 private:
     QList< Tomahawk::query_ptr > m_queries;
 signals:
