@@ -15,6 +15,7 @@ public:
     //Session* operator<<( Tomahawk::query_ptr query );
     void addQuery( Tomahawk::query_ptr q );
     QString getSessionOwner();
+    Tomahawk::source_ptr getSessionSource();
     QString getPredominantArtist();
     QString getPredominantAlbum();
     int getStartTime();

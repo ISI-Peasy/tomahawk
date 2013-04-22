@@ -19,6 +19,13 @@ Session::getSessionOwner()
     return query->playedBy().first->friendlyName();
 }
 
+Tomahawk::source_ptr
+Session::getSessionSource()
+{
+    Tomahawk::Query *query = m_queries.first().data();
+    return query->playedBy().first;
+}
+
 void
 Session::addQuery( Tomahawk::query_ptr q )
 {
