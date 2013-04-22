@@ -19,6 +19,8 @@ public:
     QString getPredominantAlbum();
     int getStartTime();
     int getEndTime();
+    int count();
+    QList< Tomahawk::query_ptr > getTracks();
     bool operator<(const Session s);
 private:
     QList< Tomahawk::query_ptr > m_queries;

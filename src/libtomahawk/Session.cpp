@@ -94,6 +94,18 @@ Session::getEndTime()
     return query->playedBy().second +  query->duration();
 }
 
+int
+Session::count()
+{
+    return m_queries.size();
+}
+
+QList< Tomahawk::query_ptr >
+Session::getTracks()
+{
+    return m_queries;
+}
+
 bool
 Session::operator<( Session s )
 {
