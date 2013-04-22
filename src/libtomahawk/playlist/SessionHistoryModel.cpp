@@ -21,8 +21,8 @@
 
 #include <QMimeData>
 #include <QTreeView>
+#include <qstring.h>
 
-#include "Session.h"
 #include "Source.h"
 #include "SourceList.h"
 #include "database/Database.h"
@@ -230,8 +230,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     qSort(sessions.begin(), sessions.end(), SessionGreatThan());
 
     // insert the sessions inside the model
-    feedModelWithSessions(QList< QPair< QString, QList< Tomahawk::query_ptr> > >()) ;
-    //feedModelWithSessions( sessions );
+    feedModelWithSessions( sessions );
 
     //debug : show sessions
     tDebug() << "We have calculate " << sessions.count() << " sessions : ";
@@ -249,55 +248,50 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
 }
 
 void
-//SessionHistoryModel::feedModelWithQueries ( const QPair< QString, QList< Tomahawk::query_ptr > > &  aSession)
-SessionHistoryModel::feedModelWithSessions ( const QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions)
+SessionHistoryModel::feedModelWithSessions ( const QList< Session* >& sessions)
 {
     if (sessions.count()) // TODO : add tracks as child of the session name
     {
-        beginResetModel();
-        m_sessionslist.clear();
-        QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
-
-        for( int i = 0 ; i < sessions.count() ; i++ )
+        if (sessions.count())
         {
-            aSession = sessions.at(i) ;
-            if(!aSession.first.isNull() && aSession.second.count()) m_sessionslist << aSession ;
+            beginResetModel();
+            m_sessionslist.clear();
+            m_sessionslist = sessions ;
+            endResetModel();
         }
     }
-    endResetModel();
 }
 
-QVariant SessionHistoryModel::data( const QModelIndex& index, int role ) const
+QVariant
+SessionHistoryModel::data( const QModelIndex& index, int role ) const
 {
     if( !index.isValid() || !hasIndex( index.row(), index.column(), index.parent() ) )
         return QVariant();
 
-    QPair< QString, QList< Tomahawk::query_ptr> > mySession =  m_sessionslist.at(index.row()) ;
+    Session* mySession =  m_sessionslist.at(index.row()) ;
 
     switch( role )
     {
-    case Qt::DisplayRole:
-    {
-        return (mySession.second.at(0)->playedBy().first->friendlyName() +" : "+ mySession.first ) ;
-    }
     case SourceRole:
     {
-        return mySession.second.at(0)->playedBy().first->friendlyName() ;
+        return QVariant(mySession->getSessionOwner()) ;
     }
     case SessionRole:
     {
-        return mySession.first ;
+        return QVariant(mySession->getPredominantArtist()) ;
     }
     case PlaytimeRole:
     {
-        return QVariant::fromValue(mySession.second.at(0)->playedBy().second );
+        return QVariant(mySession->getEndTime()) ;
     }
+
     default:
         return QVariant();
     }
 }
 
-int SessionHistoryModel::rowCount( const QModelIndex& ) const
+int
+SessionHistoryModel::rowCount( const QModelIndex& ) const
 {
     return m_sessionslist.count() ;
 }

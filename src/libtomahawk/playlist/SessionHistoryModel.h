@@ -23,6 +23,8 @@
 #include <QList>
 #include <QHash>
 
+#include "Session.h"
+
 #include "Typedefs.h"
 #include <QModelIndex>
 #include "PlaylistModel.h"
@@ -36,7 +38,7 @@ Q_OBJECT
 
 public:
     enum ItemRoles
-    { DisplayRole = Qt::DisplayRole,  SessionRole , SourceRole, PlaytimeRole };
+    { SessionRole = Qt::DisplayRole , SourceRole, PlaytimeRole };
     explicit SessionHistoryModel( QObject* parent = 0 );
     ~SessionHistoryModel();
 
@@ -58,12 +60,12 @@ private slots:
     void retrieveLovedSongs() ;
     void retrievePlayBackSongs() ;
     void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
-    void feedModelWithSessions ( const QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions) ;
+    void feedModelWithSessions ( const QList< Session* >& sessions ) ;
 
 private:
     unsigned int m_limit;
     Tomahawk::source_ptr m_source;
-    QList< QPair< QString, QList< Tomahawk::query_ptr > > > m_sessionslist ;
+    QList< Session* > m_sessionslist ;
 };
 
 #endif // SESSIONHISTORYMODEL_H
