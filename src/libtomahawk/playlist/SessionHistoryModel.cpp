@@ -22,6 +22,7 @@
 #include <QMimeData>
 #include <QTreeView>
 
+#include "Session.h"
 #include "Source.h"
 #include "SourceList.h"
 #include "database/Database.h"
@@ -187,8 +188,11 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     }
 
     QList< QPair< QString, QList< Tomahawk::query_ptr > > > sessions = QList< QPair< QString, QList< Tomahawk::query_ptr> > >();
+    QList< Session* > mySessions = QList< Session* >();
 
     QPair< QString, QList< Tomahawk::query_ptr > > aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+
+    Session* oneSession = new Session();
 
     QList< QString > aSessionArtists;
     QString currentArtist;
@@ -204,6 +208,9 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
         aSession.second = QList< Tomahawk::query_ptr >();
         aSessionArtists = QList< QString >();
+
+        oneSession = new Session();
+
         currentArtist = QString();
         currentArtistOccurs = 0;
         unsigned int lastTimeStamp = 0;
@@ -220,10 +227,10 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
                 lastTimeStamp = query->playedBy().second;
             }
 
-            //TODO: enhancement : use the duration to calculate better the sessions
             if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS )
             {
                 //it's the same session, we add it
+                oneSession->addQuery(ptr_q);
                 aSession.second << ptr_q;
                 aSessionArtists << query->artist();
                 //tDebug() << "       added to session " << ( sessions.count() + 1 );
@@ -251,12 +258,15 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
                 if( aSession.second.count() >= MIN_SESSION_COUNT )
                 {
                     sessions << aSession;
+                    mySessions << oneSession;
                     //tDebug() << "session " << ( sessions.count() ) << " aded to session list";
                 }
 
                 //new session
                 aSession = QPair< QString, QList< Tomahawk::query_ptr > >();
+                oneSession = new Session();
                 //add the current query in the new session
+                oneSession->addQuery(ptr_q);
                 aSession.second << ptr_q;
                 aSessionArtists << query->artist();
                 //tDebug() << "       added to new session " << ( sessions.count() + 1 );
@@ -285,6 +295,7 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         if( aSession.second.count() >= MIN_SESSION_COUNT )
         {
             sessions << aSession;
+            mySessions << oneSession;
             //tDebug() << "last session nb " << ( sessions.count() ) << " aded to session list";
         }
     }
@@ -293,10 +304,11 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     feedModelWithSessions(sessions) ;
 
     //debug : show sessions
-    tDebug() << "We have calculate " << sessions.count() << " sessions :";
+    tDebug() << "We have calculate " << sessions.count() << " sessions : " << mySessions.count();
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
         tDebug() << "session " << ( i + 1 ) << " : " << sessions.at(i).first << " [" <<  sessions.at(i).second.count() << "]";
+        tDebug() << "   by Session : " << mySessions.at(i)->getPredominantArtist();
 
         foreach ( const Tomahawk::query_ptr track, sessions.at(i).second )
         {

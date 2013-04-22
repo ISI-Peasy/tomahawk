@@ -189,6 +189,7 @@ list(APPEND libSources
     MetaPlaylistInterface.cpp
     Query.cpp
     Result.cpp
+    Session.cpp
     Source.cpp
     SourcePlaylistInterface.cpp
     PlaylistInterface.cpp
