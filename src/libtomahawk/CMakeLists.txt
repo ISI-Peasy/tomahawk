@@ -245,6 +245,7 @@ list(APPEND libSources
     database/DatabaseCommand_LoadPlaylistEntries.cpp
     database/DatabaseCommand_ModifyPlaylist.cpp
     database/DatabaseCommand_PlaybackHistory.cpp
+    database/DatabaseCommand_PlaybackHistorySessions.cpp
     database/DatabaseCommand_SetPlaylistRevision.cpp
     database/DatabaseCommand_LoadAllPlaylists.cpp
     database/DatabaseCommand_LoadAllSortedPlaylists.cpp

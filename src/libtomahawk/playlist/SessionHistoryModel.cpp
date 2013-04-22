@@ -26,7 +26,7 @@
 #include "Source.h"
 #include "SourceList.h"
 #include "database/Database.h"
-#include "database/DatabaseCommand_PlaybackHistory.h"
+#include "database/DatabaseCommand_PlaybackHistorySessions.h"
 #include "database/DatabaseCommand_GenericSelect.h"
 #include "PlayableItem.h"
 #include "utils/TomahawkUtils.h"
@@ -68,7 +68,7 @@ SessionHistoryModel::loadHistory()
 void
 SessionHistoryModel::retrievePlayBackSongs()
 {
-    DatabaseCommand_PlaybackHistory* cmd = new DatabaseCommand_PlaybackHistory( m_source );
+    DatabaseCommand_PlaybackHistorySessions* cmd = new DatabaseCommand_PlaybackHistorySessions( m_source );
     cmd->setLimit( m_limit );
 
     // Collect the return from db into SessionsFromQueries to build sessions
