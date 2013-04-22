@@ -19,6 +19,7 @@ public:
     QString getPredominantAlbum();
     int getStartTime();
     int getEndTime();
+    bool operator<(const Session s);
 private:
     QList< Tomahawk::query_ptr > m_queries;
 signals:
@@ -27,4 +28,13 @@ public slots:
     
 };
 
+class SessionGreatThan
+{
+public:
+    explicit SessionGreatThan();
+    bool operator()(Session *s1, Session *s2 );
+
+private:
+
+};
 #endif // SESSION_H

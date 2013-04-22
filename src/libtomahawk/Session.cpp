@@ -54,7 +54,7 @@ Session::getPredominantArtist()
 QString
 Session::getPredominantAlbum()
 {
-    QString currentAlbum = QString();
+    QString currentAlbum = QString("empty");
     QList< QString >aSessionAlbum = QList< QString >();
     int currentAlbumOccurs = 0;
 
@@ -62,7 +62,10 @@ Session::getPredominantAlbum()
     for( int i = 0; i < m_queries.count(); i++ )
     {
         Tomahawk::Query *query = m_queries.at(i).data();
-        aSessionAlbum << query->album();
+        if(query->album().size() > 0)
+        {
+            aSessionAlbum << query->album();
+        }
     }
 
     //then, compute the predominant album
@@ -89,4 +92,29 @@ Session::getEndTime()
 {
     Tomahawk::Query *query = m_queries.last().data();
     return query->playedBy().second +  query->duration();
+}
+
+bool
+Session::operator<( Session s )
+{
+    return this->getEndTime() < s.getEndTime();
+}
+
+/*
+template <class Session> bool
+qGreater<Session>::operator()(const Session& s1, const Session& s2) const
+{
+    return s1->getEndTime() < s2->getEndTime();
+}
+*/
+
+SessionGreatThan::SessionGreatThan()
+{
+
+}
+
+bool
+SessionGreatThan::operator ()(Session* s1, Session* s2)
+{
+    return s1->getEndTime() > s2->getEndTime();
 }

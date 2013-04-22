@@ -308,12 +308,18 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
         tDebug() << "session " << ( i + 1 ) << " : " << sessions.at(i).first << " [" <<  sessions.at(i).second.count() << "]";
-        tDebug() << "   by Session : " << mySessions.at(i)->getPredominantArtist();
+        tDebug() << "   by Session : " << mySessions.at(i)->getSessionOwner() << " played " << mySessions.at(i)->getPredominantAlbum() << " of " << mySessions.at(i)->getPredominantArtist() << " from " << mySessions.at(i)->getStartTime() << " to " << mySessions.at(i)->getEndTime();
 
         foreach ( const Tomahawk::query_ptr track, sessions.at(i).second )
         {
             tDebug() << "   - " << track->artist() << track->track() << " from " << track->playedBy().first->friendlyName() << " played at " << track->playedBy().second ;
         };
+    }
+
+    qSort(mySessions.begin(), mySessions.end(), SessionGreatThan());
+    for( int i = 0 ; i < mySessions.count() ; i++ )
+    {
+        tDebug() << "   " << mySessions.at(i)->getEndTime();
     }
 }
 
