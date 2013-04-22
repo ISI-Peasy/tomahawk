@@ -123,6 +123,8 @@ private slots:
     void onSourceAdded( const Tomahawk::source_ptr& source );
     void onPlaylistActivated( const QModelIndex& );
 
+    void on_sessionsView_doubleClicked(const QModelIndex &index);
+
 private:
     Ui::WelcomeWidget *ui;
 

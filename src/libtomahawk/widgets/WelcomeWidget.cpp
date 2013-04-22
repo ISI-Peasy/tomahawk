@@ -448,3 +448,9 @@ SessionDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex
 
 
 #include "WelcomeWidget.moc"
+
+void WelcomeWidget::on_sessionsView_doubleClicked(const QModelIndex &index)
+{
+    // TODO : create playlist
+
+}
