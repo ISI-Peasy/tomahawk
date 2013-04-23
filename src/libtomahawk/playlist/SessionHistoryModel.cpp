@@ -1,7 +1,7 @@
 /* === This file is part of Tomahawk Player - <http://tomahawk-player.org> ===
  *
  *   Copyright 2010-2012, Christian Muehlhaeuser <muesli@tomahawk-player.org>
- *   Franck Arrecot <franck.arrecot@gmail.com>
+ *   Copyright 2010-2011, Franck Arrecot <franck.arrecot@gmail.com>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,14 +17,15 @@
  *   along with Tomahawk. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SessionHistoryModel.h"
 
+#include <QMetaType>
 #include <QMimeData>
 #include <QTreeView>
 #include <qstring.h>
 
 #include "Source.h"
 #include "SourceList.h"
+#include "SessionHistoryModel.h"
 #include "database/Database.h"
 #include "database/DatabaseCommand_PlaybackHistorySessions.h"
 #include "database/DatabaseCommand_GenericSelect.h"
@@ -284,7 +285,10 @@ SessionHistoryModel::data( const QModelIndex& index, int role ) const
     {
         return QVariant(mySession->getEndTime()) ;
     }
-
+    case SessionItemRole:
+    {
+        return QVariant::fromValue(mySession);
+    }
     default:
         return QVariant();
     }

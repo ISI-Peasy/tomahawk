@@ -451,6 +451,12 @@ SessionDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex
 
 void WelcomeWidget::on_sessionsView_doubleClicked(const QModelIndex &index)
 {
-    // TODO : create playlist
+    // Retrieve Session and fill the playlist
+    Session* mySession = index.data(SessionHistoryModel::SessionItemRole).value<Session*>() ;
+    source_ptr author = mySession->getSessionSource() ;
+    QString title = "SessionPlaylist" ;
+    QList<Tomahawk::query_ptr> queries =  mySession->getTracks() ;
 
+    playlist_ptr playlist = Tomahawk::Playlist::create( author, uuid(), title, "", "", false, queries);
+    ViewManager::instance()->show( playlist );
 }

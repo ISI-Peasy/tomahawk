@@ -1,7 +1,7 @@
 /* === This file is part of Tomahawk Player - <http://tomahawk-player.org> ===
  *
  *   Copyright 2010-2011, Christian Muehlhaeuser <muesli@tomahawk-player.org>
- *   Franck Arrecot <franck.arrecot@gmail.com>
+ *   Copyright 2010-2011, Franck Arrecot <franck.arrecot@gmail.com>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -38,9 +38,9 @@ Q_OBJECT
 
 public:
     enum ItemRoles
-    { SessionRole = Qt::DisplayRole , SourceRole, PlaytimeRole };
+    { SessionRole = Qt::DisplayRole , SourceRole, PlaytimeRole,SessionItemRole };
     explicit SessionHistoryModel( QObject* parent = 0 );
-    ~SessionHistoryModel();
+    virtual ~SessionHistoryModel();
 
     virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
     virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
