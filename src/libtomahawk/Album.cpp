@@ -34,21 +34,22 @@
 
 using namespace Tomahawk;
 
-QHash< QString, album_ptr > Album::s_albumsByName = QHash< QString, album_ptr >();
-QHash< unsigned int, album_ptr > Album::s_albumsById = QHash< unsigned int, album_ptr >();
+QHash< QString, album_wptr > Album::s_albumsByName = QHash< QString, album_wptr >();
+QHash< unsigned int, album_wptr > Album::s_albumsById = QHash< unsigned int, album_wptr >();
 
 static QMutex s_nameCacheMutex;
-static QMutex s_idCacheMutex;
 static QReadWriteLock s_idMutex;
 
 Album::~Album()
 {
+    tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Deleting album:" << m_name << m_artist->name();
     m_ownRef.clear();
 
 #ifndef ENABLE_HEADLESS
     delete m_cover;
 #endif
 }
+
 
 inline QString
 albumCacheKey( const Tomahawk::artist_ptr& artist, const QString& albumName )
@@ -63,15 +64,16 @@ Album::get( const Tomahawk::artist_ptr& artist, const QString& name, bool autoCr
     if ( !Database::instance() || !Database::instance()->impl() )
         return album_ptr();
 
-    QMutexLocker l( &s_nameCacheMutex );
-
+    QMutexLocker lock( &s_nameCacheMutex );
     const QString key = albumCacheKey( artist, name );
     if ( s_albumsByName.contains( key ) )
     {
-        return s_albumsByName.value( key );
+        album_wptr album = s_albumsByName.value( key );
+        if ( !album.isNull() )
+            return album.toStrongRef();
     }
 
-    album_ptr album = album_ptr( new Album( name, artist ) );
+    album_ptr album = album_ptr( new Album( name, artist ), &Album::deleteLater );
     album->setWeakRef( album.toWeakRef() );
     album->loadId( autoCreate );
     s_albumsByName.insert( key, album );
@@ -83,28 +85,35 @@ Album::get( const Tomahawk::artist_ptr& artist, const QString& name, bool autoCr
 album_ptr
 Album::get( unsigned int id, const QString& name, const Tomahawk::artist_ptr& artist )
 {
-    static QHash< unsigned int, album_ptr > s_albums;
-    static QMutex s_mutex;
+    s_idMutex.lockForRead();
+    if ( s_albumsById.contains( id ) )
+    {
+        album_wptr album = s_albumsById.value( id );
+        s_idMutex.unlock();
 
-    QMutexLocker lock( &s_idCacheMutex );
+        if ( !album.isNull() )
+            return album;
+    }
+    s_idMutex.unlock();
 
+    QMutexLocker lock( &s_nameCacheMutex );
     const QString key = albumCacheKey( artist, name );
     if ( s_albumsByName.contains( key ) )
     {
-        return s_albumsByName.value( key );
-    }
-    if ( s_albumsById.contains( id ) )
-    {
-        return s_albumsById.value( id );
+        album_wptr album = s_albumsByName.value( key );
+        if ( !album.isNull() )
+            return album;
     }
 
-    album_ptr a = album_ptr( new Album( id, name, artist ), &QObject::deleteLater );
+    album_ptr a = album_ptr( new Album( id, name, artist ), &Album::deleteLater );
     a->setWeakRef( a.toWeakRef() );
     s_albumsByName.insert( key, a );
 
     if ( id > 0 )
     {
+        s_idMutex.lockForWrite();
         s_albumsById.insert( id, a );
+        s_idMutex.unlock();
     }
 
     return a;
@@ -123,6 +132,7 @@ Album::Album( unsigned int id, const QString& name, const Tomahawk::artist_ptr& 
     , m_cover( 0 )
 #endif
 {
+    tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Creating album:" << id << name << artist->name();
     m_sortname = DatabaseImpl::sortname( name );
 }
 
@@ -138,8 +148,35 @@ Album::Album( const QString& name, const Tomahawk::artist_ptr& artist )
     , m_cover( 0 )
 #endif
 {
+    tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Creating album:" << name << artist->name();
     m_sortname = DatabaseImpl::sortname( name );
 }
+
+
+void
+Album::deleteLater()
+{
+    QMutexLocker lock( &s_nameCacheMutex );
+
+    const QString key = albumCacheKey( m_artist, m_name );
+    if ( s_albumsByName.contains( key ) )
+    {
+        s_albumsByName.remove( key );
+    }
+
+    if ( m_id > 0 )
+    {
+        s_idMutex.lockForWrite();
+        if ( s_albumsById.contains( m_id ) )
+        {
+            s_albumsById.remove( m_id );
+        }
+        s_idMutex.unlock();
+    }
+
+    QObject::deleteLater();
+}
+
 
 void
 Album::onTracksLoaded( Tomahawk::ModelMode mode, const Tomahawk::collection_ptr& collection )
@@ -187,7 +224,7 @@ Album::id() const
         m_waitingForId = false;
 
         if ( m_id > 0 )
-            s_albumsById[ m_id ] = m_ownRef.toStrongRef();
+            s_albumsById.insert( m_id, m_ownRef.toStrongRef() );
 
         s_idMutex.unlock();
     }

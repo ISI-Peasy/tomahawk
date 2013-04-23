@@ -53,6 +53,7 @@ TreeView::TreeView( QWidget* parent )
     , m_overlay( new OverlayWidget( this ) )
     , m_model( 0 )
     , m_proxyModel( 0 )
+    , m_delegate( 0 )
     , m_loadingSpinner( new LoadingSpinner( this ) )
     , m_updateContextView( true )
     , m_contextMenu( new ContextMenu( this ) )
@@ -99,9 +100,9 @@ void
 TreeView::setProxyModel( TreeProxyModel* model )
 {
     m_proxyModel = model;
-    TreeItemDelegate* del = new TreeItemDelegate( this, m_proxyModel );
-    connect( del, SIGNAL( updateIndex( QModelIndex ) ), this, SLOT( update( QModelIndex ) ) );
-    setItemDelegate( del );
+    m_delegate = new TreeItemDelegate( this, m_proxyModel );
+    connect( m_delegate, SIGNAL( updateIndex( QModelIndex ) ), SLOT( update( QModelIndex ) ) );
+    setItemDelegate( m_delegate );
 
     QTreeView::setModel( m_proxyModel );
 }
@@ -234,7 +235,7 @@ TreeView::onItemActivated( const QModelIndex& index )
     PlayableItem* item = m_model->itemFromIndex( m_proxyModel->mapToSource( index ) );
     if ( item )
     {
-        if ( !item->artist().isNull() )
+/*        if ( !item->artist().isNull() )
         {
             ViewManager::instance()->show( item->artist() );
         }
@@ -242,7 +243,7 @@ TreeView::onItemActivated( const QModelIndex& index )
         {
             ViewManager::instance()->show( item->album() );
         }
-        else if ( !item->result().isNull() && item->result()->isOnline() )
+        else */ if ( !item->result().isNull() && item->result()->isOnline() )
         {
             AudioEngine::instance()->playItem( m_proxyModel->playlistInterface(), item->result() );
         }
@@ -282,6 +283,16 @@ TreeView::resizeEvent( QResizeEvent* event )
     {
         m_header->resizeSection( 0, event->size().width() );
     }
+}
+
+
+void
+TreeView::wheelEvent( QWheelEvent* event )
+{
+    QTreeView::wheelEvent( event );
+
+    m_delegate->resetHoverIndex();
+    repaint();
 }
 
 
@@ -424,96 +435,6 @@ TreeView::jumpToCurrentTrack()
 
     scrollTo( m_proxyModel->currentIndex(), QAbstractItemView::PositionAtCenter );
     return true;
-}
-
-
-void
-TreeView::updateHoverIndex( const QPoint& pos )
-{
-    QModelIndex idx = indexAt( pos );
-
-    if ( idx != m_hoveredIndex )
-    {
-        m_hoveredIndex = idx;
-        repaint();
-    }
-
-    if ( !m_model || m_proxyModel->style() != PlayableProxyModel::Collection )
-        return;
-
-    PlayableItem* item = proxyModel()->itemFromIndex( proxyModel()->mapToSource( idx ) );
-    if ( idx.column() == 0 && !item->query().isNull() )
-    {
-        if ( pos.x() > header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) - 16 &&
-             pos.x() < header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) )
-        {
-            setCursor( Qt::PointingHandCursor );
-            return;
-        }
-    }
-
-    if ( cursor().shape() != Qt::ArrowCursor )
-        setCursor( Qt::ArrowCursor );
-}
-
-
-void
-TreeView::wheelEvent( QWheelEvent* event )
-{
-    QTreeView::wheelEvent( event );
-
-    if ( m_hoveredIndex.isValid() )
-    {
-        m_hoveredIndex = QModelIndex();
-        repaint();
-    }
-}
-
-
-void
-TreeView::leaveEvent( QEvent* event )
-{
-    QTreeView::leaveEvent( event );
-    updateHoverIndex( QPoint( -1, -1 ) );
-}
-
-
-void
-TreeView::mouseMoveEvent( QMouseEvent* event )
-{
-    QTreeView::mouseMoveEvent( event );
-    updateHoverIndex( event->pos() );
-}
-
-
-void
-TreeView::mousePressEvent( QMouseEvent* event )
-{
-    QTreeView::mousePressEvent( event );
-
-    if ( !m_model || m_proxyModel->style() != PlayableProxyModel::Collection )
-        return;
-
-    QModelIndex idx = indexAt( event->pos() );
-    if ( event->pos().x() > header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) - 16 &&
-         event->pos().x() < header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) )
-    {
-        PlayableItem* item = proxyModel()->itemFromIndex( proxyModel()->mapToSource( idx ) );
-        if ( item->query().isNull() )
-            return;
-
-        switch ( idx.column() )
-        {
-            case 0:
-            {
-                ViewManager::instance()->show( item->query()->displayQuery() );
-                break;
-            }
-
-            default:
-                break;
-        }
-    }
 }
 
 

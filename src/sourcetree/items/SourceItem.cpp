@@ -21,6 +21,9 @@
 #include "SourceItem.h"
 
 #include "CategoryItems.h"
+#include "database/Database.h"
+#include "database/DatabaseCommand_ShareTrack.h"
+#include "DropJob.h"
 #include "PlaylistItems.h"
 #include "ViewManager.h"
 #include "Playlist.h"
@@ -39,6 +42,7 @@
 #include "utils/ImageRegistry.h"
 #include "utils/TomahawkUtilsGui.h"
 #include "utils/Logger.h"
+#include "TomahawkApp.h"
 
 /// SourceItem
 
@@ -156,23 +160,26 @@ SourceItem::tooltip() const
 
     QString t;
 
-
-    // This is kind of debug output for now.
-    t.append( "<PRE>" );
-
-    QString narf("%1: %2\n");
-    t.append( narf.arg( "id" ).arg( m_source->id() ) );
-    t.append( narf.arg( "username" ).arg( m_source->nodeId() ) );
-    t.append( narf.arg( "friendlyname" ).arg( m_source->friendlyName() ) );
-    t.append( narf.arg( "dbfriendlyname" ).arg( m_source->dbFriendlyName() ) );
-
-    t.append("\n");
-    foreach( Tomahawk::peerinfo_ptr p, m_source->peerInfos() )
+    bool showDebugInfo = APP->arguments().contains( "--verbose" );
+    if ( showDebugInfo )
     {
-        QString line( p->sipPlugin()->serviceName() + p->sipPlugin()->friendlyName() + ": " + p->id() + " " + p->friendlyName() );
-        t.append( line + "\n\n" );
+        // This is kind of debug output for now.
+        t.append( "<PRE>" );
+
+        QString narf("%1: %2\n");
+        t.append( narf.arg( "id" ).arg( m_source->id() ) );
+        t.append( narf.arg( "username" ).arg( m_source->nodeId() ) );
+        t.append( narf.arg( "friendlyname" ).arg( m_source->friendlyName() ) );
+        t.append( narf.arg( "dbfriendlyname" ).arg( m_source->dbFriendlyName() ) );
+
+        t.append("\n");
+        foreach( Tomahawk::peerinfo_ptr p, m_source->peerInfos() )
+        {
+            QString line( p->sipPlugin()->serviceName() + p->sipPlugin()->friendlyName() + ": " + p->id() + " " + p->friendlyName() );
+            t.append( line + "\n\n" );
+        }
+        t.append( "</PRE>" );
     }
-    t.append( "</PRE>" );
 
     if ( !m_source->currentTrack().isNull() )
         t.append( m_source->textStatus() );
@@ -563,7 +570,7 @@ SourceItem::collectionClicked( const Tomahawk::collection_ptr& collection )
 
 ViewPage*
 SourceItem::getCollectionPage( const Tomahawk::collection_ptr& collection ) const
-{    
+{
     return m_collectionPages[ collection ];
 }
 
@@ -673,6 +680,20 @@ SourceItem::getRecentPlaysPage() const
 }
 
 
+void
+SourceItem::onTracksDropped( const QList< query_ptr >& queries )
+{
+    foreach ( const query_ptr& query, queries )
+    {
+        DatabaseCommand_ShareTrack* cmd = new DatabaseCommand_ShareTrack( query->track(), m_source->nodeId() );
+
+        Database::instance()->enqueue( QSharedPointer< DatabaseCommand >( cmd ) );
+    }
+    tDebug() << "I am" << SourceList::instance()->getLocal()->nodeId();
+    tDebug() << "Dropped tracks on source item" << text() << m_source->friendlyName() << m_source->nodeId();
+}
+
+
 CategoryItem*
 SourceItem::stationsCategory() const
 {
@@ -698,4 +719,51 @@ void
 SourceItem::setPlaylistsCategory(CategoryItem* item)
 {
     m_playlists = item;
+}
+
+
+bool
+SourceItem::willAcceptDrag( const QMimeData* data ) const
+{
+    return DropJob::acceptsMimeData( data, DropJob::Track );
+}
+
+
+bool
+SourceItem::dropMimeData( const QMimeData* data, Qt::DropAction action )
+{
+    Q_UNUSED( action );
+
+    QList< Tomahawk::query_ptr > queries;
+    if ( !DropJob::acceptsMimeData( data, DropJob::Track ) )
+        return false;
+
+    if ( source()->isLocal() )
+        return false;
+
+    DropJob* dj = new DropJob();
+    dj->setDropTypes( DropJob::Track );
+
+    connect( dj, SIGNAL( tracks( QList< Tomahawk::query_ptr > ) ),
+             this, SLOT( onTracksDropped( QList< Tomahawk::query_ptr > ) ) );
+    dj->tracksFromMimeData( data, false, false );
+    return true;
+}
+
+
+SourceTreeItem::DropTypes
+SourceItem::supportedDropTypes( const QMimeData* data ) const
+{
+    if ( data->hasFormat( "application/tomahawk.result.list" ) ||
+         data->hasFormat( "application/tomahawk.query.list" ) )
+        return DropTypeThisTrack;
+
+    return DropTypesNone;
+}
+
+
+Qt::ItemFlags
+SourceItem::flags() const
+{
+    return SourceTreeItem::flags() | Qt::ItemIsDropEnabled;
 }

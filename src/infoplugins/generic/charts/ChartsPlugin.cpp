@@ -51,11 +51,13 @@ namespace InfoSystem
 ChartsPlugin::ChartsPlugin()
     : InfoPlugin()
     , m_chartsFetchJobs( 0 )
+    , m_fetchAll( true )
 {
     tDebug( LOGVERBOSE ) << Q_FUNC_INFO << QThread::currentThread();
-    /// If you add resource, update version aswell
-    m_chartVersion = "2.6";
+
+    m_chartVersion = "2.6.5";
     m_supportedGetTypes <<  InfoChart << InfoChartCapabilities;
+    m_cacheIdentifier = TomahawkUtils::md5( QString("ChartsPlugin" + m_chartVersion ).toUtf8() );
 }
 
 
@@ -68,7 +70,7 @@ ChartsPlugin::~ChartsPlugin()
 void
 ChartsPlugin::init()
 {
-    QVariant data = TomahawkUtils::Cache::instance()->getData( "ChartsPlugin", "chart_sources" );
+    QVariant data = TomahawkUtils::Cache::instance()->getData( m_cacheIdentifier, "chart_sources" );
     if ( data.canConvert< QList< Tomahawk::InfoSystem::InfoStringHash > >() )
     {
          const QList< Tomahawk::InfoSystem::InfoStringHash > sourceList = data.value< QList< Tomahawk::InfoSystem::InfoStringHash > >();
@@ -83,20 +85,27 @@ ChartsPlugin::init()
              }
              m_chartResources << sourceHash;
          }
+
+         data = TomahawkUtils::Cache::instance()->getData( m_cacheIdentifier, "allCharts" );
+
+         if ( data.canConvert< QVariantMap >() )
+         {
+             m_allChartsMap = data.toMap();
+             if ( !m_allChartsMap.empty() )
+                 m_fetchAll = false;
+         }
     }
     else
     {
         tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Migrating";
-        m_refetchSource << "ALL";
     }
 
     tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "total sources" << m_chartResources.size() << m_chartResources;
 
-    if( m_chartResources.size() == 0 || m_refetchSource.size() != 0 )
+    if( ( m_chartResources.size() == 0 || m_refetchSource.size() != 0 ) || m_fetchAll )
     {
-        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Will refetch on next request. Empty or Invalid CACHE" << m_chartResources.size() << m_refetchSource;
+        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Will refetch on next request. Empty or Invalid CACHE" << m_chartResources.size() << m_refetchSource << "fetchAll?" << m_fetchAll;
     }
-
 }
 
 
@@ -296,8 +305,6 @@ ChartsPlugin::chartSourcesList()
             return;
         }
 
-        /// This will re/fetch all sources
-        /// @todo: Fetch only requested source
         m_chartResources.clear();
 
         foreach ( const QVariant &rsource, sources )
@@ -319,27 +326,42 @@ ChartsPlugin::chartSourcesList()
                 source_expire[ "chart_source" ] = source;
                 source_expire[ "chart_expires" ] = QString::number(expires);
                 m_chartResources << source_expire;
-            }
 
-            if ( maxAge == 0 )
-            {
-                tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "MaxAge for " << source << " is  0. Fetching all";
-                reply->setProperty( "only_source_list", false );
+                if( !m_fetchAll )
+                {
+                    if ( maxAge == 0 )
+                    {
+                        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "MaxAge for " << source << " is  0. reFetching";
+                        reply->setProperty( "only_source_list", false );
+                    }
+                }
+                else
+                {
+                    m_refetchSource << source;
+                }
             }
-
         }
-
 
         /// We can store the source list for how long as we want
         /// In init, we check expiration for each source, and refetch if invalid
         /// 2 days seems fair enough though
         tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "storing sources in cache" << m_chartResources;
-        TomahawkUtils::Cache::instance()->putData( "ChartsPlugin", 172800000 /* 2 days */, "chart_sources", QVariant::fromValue< QList< Tomahawk::InfoSystem::InfoStringHash > > ( m_chartResources ) );
+        TomahawkUtils::Cache::instance()->putData( m_cacheIdentifier, 172800000 /* 2 days */, "chart_sources", QVariant::fromValue< QList< Tomahawk::InfoSystem::InfoStringHash > > ( m_chartResources ) );
 
         if( !reply->property( "only_source_list" ).toBool() )
         {
-            tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Fetching all sources!";
-            fetchAllChartSources();
+
+            if ( !m_fetchAll )
+            {
+                tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "reFetching" << m_refetchSource;
+                fetchExpiredSources();
+            }
+            else
+            {
+                tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Fetching all sources!" << m_refetchSource;
+                fetchAllChartSources();
+                m_fetchAll = false;
+            }
         }
     }
     else
@@ -347,26 +369,43 @@ ChartsPlugin::chartSourcesList()
 }
 
 
+void
+ChartsPlugin::fetchSource(const QString& source)
+{
+    QUrl url = QUrl( QString( CHART_URL "charts/%1" ).arg( source ) );
+    TomahawkUtils::urlAddQueryItem( url, "version", TomahawkUtils::appFriendlyVersion() );
+
+    QNetworkReply* reply = TomahawkUtils::nam()->get( QNetworkRequest( url ) );
+    reply->setProperty( "chart_source", source );
+
+    tDebug() << Q_FUNC_INFO << "fetching:" << url;
+    connect( reply, SIGNAL( finished() ), SLOT( chartsList() ) );
+
+    m_chartsFetchJobs++;
+}
+
+
+void
+ChartsPlugin::fetchExpiredSources()
+{
+    if ( !m_refetchSource.isEmpty() )
+    {
+        foreach ( const QString& source, m_refetchSource )
+        {
+            fetchSource(source);
+        }
+    }
+}
+
 
 void
 ChartsPlugin::fetchAllChartSources()
 {
     if ( !m_chartResources.isEmpty() && m_allChartsMap.isEmpty() )
     {
-        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "InfoNewRelease fetching source data";
         foreach ( const Tomahawk::InfoSystem::InfoStringHash source, m_chartResources )
         {
-            QUrl url = QUrl( QString( CHART_URL "charts/%1" ).arg( source[ "chart_source" ] ) );
-
-            TomahawkUtils::urlAddQueryItem( url, "version", TomahawkUtils::appFriendlyVersion() );
-
-            QNetworkReply* reply = TomahawkUtils::nam()->get( QNetworkRequest( url ) );
-            reply->setProperty( "chart_source", source[ "chart_source" ] );
-
-            tDebug() << Q_FUNC_INFO << "fetching:" << url;
-            connect( reply, SIGNAL( finished() ), SLOT( chartsList() ) );
-
-            m_chartsFetchJobs++;
+            fetchSource(source[ "chart_source" ]);
         }
     }
 }
@@ -399,7 +438,7 @@ ChartsPlugin::chartsList()
     {
         QJson::Parser p;
         bool ok;
-        const QVariantMap res = p.parse( reply, &ok ).toMap();
+        QVariantMap res = p.parse( reply, &ok ).toMap();
 
         if ( !ok )
         {
@@ -408,8 +447,12 @@ ChartsPlugin::chartsList()
             return;
         }
 
-        /// Got types, append!
-        const QString source = reply->property("chart_source").toString();
+        const QVariantMap details = res.take( "details" ).toMap();
+        const QVariantMap response = res;
+        const bool haveExtra = details.value( "have_extra", false ).toBool();
+        // This is what we use as ID
+        const QString source = reply->property( "chart_source" ).toString();
+        const QString prettyName = details.value( "name", source ).toString();
         const qlonglong expires = QString( reply->rawHeader( QString( "Expires" ).toLocal8Bit() ) ).toLongLong( &ok );
 
         if ( !ok )
@@ -421,29 +464,29 @@ ChartsPlugin::chartsList()
 
         // We'll populate charts with the data from the server
         QVariantMap charts;
-        QString chartName;
         QStringList defaultChain;
-        if ( source == "wearehunted" || source == "itunes" || source == "hotnewhiphop" || source == "djshop.de" )
+
+        if ( haveExtra )
         {
-            // Some charts can have an extra param, itunes has geo, WAH has emerging/mainstream
+            // Some charts can have an extra param, itunes has geo, HNHH has upcomming/all/mainstream
             // Itunes has geographic-area based charts. So we build a breadcrumb of
             // ITunes - Country - Albums - Top Chart Type
             //                  - Tracks - Top Chart Type
-            // WeAreHunted has Mainstream/Emerging
-            // WeAreHunted - Type - Artists - Chart Type
-            //                    - Tracks  - Chart Type
+            // NameID - Extra - Type -> Chart Name
             QHash< QString, QVariantMap > extraType;
             QStringList processed;
-            foreach ( const QVariant& chartObj, res.values() )
+
+            foreach ( const QVariant& chartObj, response.values() )
             {
                 if ( !chartObj.toMap().isEmpty() )
                 {
                     const QVariantMap chart = chartObj.toMap();
                     const QString id = chart.value( "id" ).toString();
                     const QString geo = chart.value( "geo" ).toString();
-                    QString name = chart.value( "genre" ).toString();
-                    const QString type = QString( chart.value( "type" ).toString() + "s" );
+                    const QString name = chart.value( "display_name" ).toString();
+                    const QString type = QString( chart.value( "type" ).toString() );
                     const bool isDefault = ( chart.contains( "default" ) && chart[ "default" ].toInt() == 1 );
+                    QString extra;
 
                     // Hack!
                     // Japan charts contains multiple duplicates, all which are linked
@@ -456,82 +499,36 @@ ChartsPlugin::chartsList()
                         processed << name;
                     }
 
-                    QString extra;
                     if ( !geo.isEmpty() )
-                    {
-                        if ( !m_cachedCountries.contains( geo ) )
-                        {
-                            extra = Tomahawk::CountryUtils::fullCountryFromCode( geo );
-
-                            for ( int i = 1; i < extra.size(); i++ )
-                            {
-                                if ( extra.at( i ).isUpper() )
-                                {
-                                    extra.insert( i, " " );
-                                    i++;
-                                }
-                            }
-                            m_cachedCountries[ geo ] = extra;
-                        }
-                        else
-                            extra = m_cachedCountries[ geo ];
-                    }
+                        extra = countryName( geo );
                     else
                         extra = chart.value( "extra" ).toString();
-
-                    if ( source == "hotnewhiphop" )
-                        name = chart.value( "name" ).toString();
-                    if ( source == "djshop.de" )
-                        name = chart.value( "name" ).toString();
-
-                    if ( name.isEmpty() ) // not a specific chart, an all chart
-                        name = tr( "Top Overall" );
 
                     InfoStringHash c;
                     c[ "id" ] = id;
                     c[ "label" ] = name;
-                    c[ "type" ] = "album";
-                    if ( isDefault )
-                        c[ "default" ] = "true";
+                    c[ "type" ] = type;
 
-                    /// If this item has expired, set it to 0.
+                    if ( isDefault )
+                    {
+                        c[ "default" ] = "true";
+                        defaultChain.clear();
+                        defaultChain.append( extra );
+                        defaultChain.append( type );
+                        defaultChain.append( name );
+                    }
+
+                    // If this item has expired, set it to 0.
                     c[ "expires" ] = ( ok ? QString::number (expires ) : QString::number( 0 ) );
 
                     QList< Tomahawk::InfoSystem::InfoStringHash > extraTypeData = extraType[ extra ][ type ].value< QList< Tomahawk::InfoSystem::InfoStringHash > >();
                     extraTypeData.append( c );
                     extraType[ extra ][ type ] = QVariant::fromValue< QList< Tomahawk::InfoSystem::InfoStringHash > >( extraTypeData );
 
-                    if ( isDefault )
-                    {
-                        defaultChain.clear();
-                        defaultChain.append( extra );
-                        defaultChain.append( type );
-                        defaultChain.append( name );
-                    }
                 }
                 foreach ( const QString& c, extraType.keys() )
                 {
                     charts[ c ] = extraType[ c ];
-                }
-                if ( source == "itunes" )
-                {
-                    chartName = "iTunes";
-                }
-                else if ( source == "soundcloudwall" )
-                {
-                    chartName = "SoundCloudWall";
-                }
-                else if ( source == "wearehunted" )
-                {
-                    chartName = "WeAreHunted";
-                }
-                else if ( source == "hotnewhiphop" )
-                {
-                    chartName = "HotNewHiphop";
-                }
-                else if ( source == "djshop.de" )
-                {
-                    chartName = "DjShop.de";
                 }
             }
         }
@@ -544,47 +541,36 @@ ChartsPlugin::chartsList()
             QList< InfoStringHash > trackCharts;
             QList< InfoStringHash > artistCharts;
 
-            foreach ( const QVariant& chartObj, res.values() )
+            foreach ( const QVariant& chartObj, response.values() )
             {
                 if ( !chartObj.toMap().isEmpty() )
                 {
                     const QVariantMap chart = chartObj.toMap();
                     const QString type = chart.value( "type" ).toString();
+                    const QString name = chart.value( "display_name" ).toString();
                     const bool isDefault = ( chart.contains( "default" ) && chart[ "default" ].toInt() == 1 );
 
                     InfoStringHash c;
                     c[ "id" ] = chart.value( "id" ).toString();
+                    c[ "label" ] = name;
                     c[ "expires" ] = ( ok ? QString::number( expires ) : QString::number( 0 ) );
-                    if ( chart.value( "genre").isValid() )
-                        c[ "label" ] = chart.value( "genre" ).toString();
-                    else
-                        c[ "label" ] = chart.value( "name" ).toString();
+                    c[ "type" ] = type.toLower();
 
                     if ( isDefault )
+                    {
                         c[ "default" ] = "true";
-
-                    if ( type == "Album" )
-                    {
-                        c[ "type" ] = "album";
-                        albumCharts.append( c );
-                    }
-                    else if ( type == "Track" )
-                    {
-                        c[ "type" ] = "tracks";
-                        trackCharts.append( c );
-                    }
-                    else if ( type == "Artist" )
-                    {
-                        c[ "type" ] = "artists";
-                        artistCharts.append( c );
-                    }
-
-                    if ( isDefault )
-                    {
                         defaultChain.clear();
-                        defaultChain.append( type + "s" ); //UGLY but it's plural to the user, see below
+                        defaultChain.append( type );
                         defaultChain.append( c[ "label" ] );
                     }
+
+                    if ( type == "Albums" )
+                        albumCharts.append( c );
+                    else if ( type == "Tracks" )
+                        trackCharts.append( c );
+                    else if ( type == "Artists" )
+                        artistCharts.append( c );
+
                 }
 
                 if ( !artistCharts.isEmpty() )
@@ -594,20 +580,18 @@ ChartsPlugin::chartsList()
                 if ( !trackCharts.isEmpty() )
                     charts.insert( tr( "Tracks" ), QVariant::fromValue< QList< Tomahawk::InfoSystem::InfoStringHash > >( trackCharts ) );
 
-                /// @note For displaying purposes, upper the first letter
-                /// @note Remeber to lower it when fetching this!
-                chartName = source;
-                chartName[0] = chartName[0].toUpper();
             }
         }
 
-        /// Add the possible charts and its types to breadcrumb
-        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Adding to charts:" << chartName;
+        // Add the possible charts and its types to breadcrumb
+        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Adding to charts:" << prettyName;
         QVariantMap defaultMap = m_allChartsMap.value( "defaults" ).value< QVariantMap >();
         defaultMap[ source ] = defaultChain;
         m_allChartsMap[ "defaults" ] = defaultMap;
         m_allChartsMap[ "defaultSource" ] = "itunes";
-        m_allChartsMap.insert( chartName , QVariant::fromValue< QVariantMap >( charts ) );
+        m_allChartsMap.insert( prettyName , QVariant::fromValue< QVariantMap >( charts ) );
+        m_refetchSource.removeOne( source );
+        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Fetched " << source << " have " << m_refetchSource << "left";
     }
     else
     {
@@ -620,15 +604,17 @@ ChartsPlugin::chartsList()
         foreach ( InfoRequestData request, m_cachedRequests )
         {
             emit info( request, m_allChartsMap );
-            // update cache
+
             tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Updating cache with" << m_allChartsMap.size() << "charts";
             Tomahawk::InfoSystem::InfoStringHash criteria;
             criteria[ "InfoChartCapabilities" ] = "chartsplugin";
             criteria[ "InfoChartVersion" ] = m_chartVersion;
 
             /// We can cache it the lot for 2 days, it will be checked on next request
-            emit updateCache( criteria, 172800000 /* 2 days */, request.type,m_allChartsMap );
+            emit updateCache( criteria, 172800000 /* 2 days */, request.type, m_allChartsMap );
         }
+
+        TomahawkUtils::Cache::instance()->putData( m_cacheIdentifier, 172800000 /* 2 days */, "allCharts", m_allChartsMap );
         m_cachedRequests.clear();
     }
 }
@@ -775,6 +761,27 @@ ChartsPlugin::chartReturned()
     }
 }
 
+
+QString
+ChartsPlugin::countryName( const QString& cc )
+{
+    if ( m_cachedCountries.contains( cc ) )
+        return m_cachedCountries[ cc ];
+
+    QString name = Tomahawk::CountryUtils::fullCountryFromCode( cc );
+    for ( int i = 1; i < name.size(); i++ )
+    {
+        if ( name.at( i ).isUpper() )
+        {
+            name.insert( i, " " );
+            i++;
+        }
+    }
+    m_cachedCountries[ cc ] = name;
+    return name;
+}
+
+
 qlonglong
 ChartsPlugin::getMaxAge( const QByteArray &rawHeader ) const
 {
@@ -782,7 +789,6 @@ ChartsPlugin::getMaxAge( const QByteArray &rawHeader ) const
     qlonglong expires = QString( rawHeader ).toLongLong( &ok );
     if ( ok )
     {
-        tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Got rawheader " << QString( rawHeader ) << ":" << expires;
         return getMaxAge( expires );
     }
     return 0;

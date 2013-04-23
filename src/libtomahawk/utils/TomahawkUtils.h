@@ -121,6 +121,7 @@ namespace TomahawkUtils
         SipPluginOnline,
         SipPluginOffline,
         ResolverBundle,
+        Inbox,
         Invalid
     };
 
@@ -205,6 +206,8 @@ namespace TomahawkUtils
     void copyWithAuthentication( const QString& srcFile, const QDir dest, QObject* receiver );
 
     DLLEXPORT bool whitelistedHttpResultHint( const QString& url );
+
+    DLLEXPORT int compareVersionStrings( const QString& first, const QString& second );
 
     /**
      * This helper is designed to help "update" an existing playlist with a newer revision of itself.

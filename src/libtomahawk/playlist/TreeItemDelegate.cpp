@@ -23,6 +23,7 @@
 #include <QPainter>
 #include <QAbstractItemView>
 #include <QHeaderView>
+#include <QMouseEvent>
 
 #include "Query.h"
 #include "Result.h"
@@ -35,6 +36,7 @@
 #include "PlayableItem.h"
 #include "TreeProxyModel.h"
 #include "TreeView.h"
+#include "ViewManager.h"
 #include "Typedefs.h"
 
 
@@ -73,7 +75,7 @@ TreeItemDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelInde
                 break;
         }
     }
-    
+
     // artist per default
     size.setHeight( option.fontMetrics.height() * 4 );
     return size;
@@ -135,13 +137,15 @@ TreeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
             if ( oldX > 0 )
                 o.rect.setX( oldX );
 
-            if ( m_view->hoveredIndex() == index && !index.data().toString().isEmpty() && index.column() == 0 )
+            if ( m_hoveringOver == index && !index.data().toString().isEmpty() && index.column() == 0 )
             {
                 o.rect.setWidth( o.rect.width() - o.rect.height() );
                 QRect arrowRect( o.rect.x() + o.rect.width(), o.rect.y() + 1, o.rect.height() - 2, o.rect.height() - 2 );
 
                 QPixmap infoIcon = TomahawkUtils::defaultPixmap( TomahawkUtils::InfoIcon, TomahawkUtils::Original, arrowRect.size() );
                 painter->drawPixmap( arrowRect, infoIcon );
+
+                m_infoButtonRects[ index ] = arrowRect;
             }
 
             {
@@ -182,6 +186,15 @@ TreeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
         opt.palette.setColor( QPalette::Text, opt.palette.color( QPalette::HighlightedText ) );
     }
 
+    QRect arrowRect( m_view->viewport()->width() - option.rect.height(), option.rect.y() + 1, option.rect.height() - 2, option.rect.height() - 2 );
+    if ( m_hoveringOver.row() == index.row() && m_hoveringOver.parent() == index.parent() )
+    {
+        QPixmap infoIcon = TomahawkUtils::defaultPixmap( TomahawkUtils::InfoIcon, TomahawkUtils::Original, arrowRect.size() );
+        painter->drawPixmap( arrowRect, infoIcon );
+
+        m_infoButtonRects[ index ] = arrowRect;
+    }
+
     if ( index.column() > 0 )
         return;
 
@@ -209,7 +222,6 @@ TreeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
     }
 
     const QPixmap cover = m_pixmaps[ index ]->currentPixmap();
-
     painter->drawPixmap( r, cover );
 
     r = option.rect.adjusted( option.rect.height(), 6, -4, -option.rect.height() + 22 );
@@ -226,3 +238,88 @@ TreeItemDelegate::doUpdateIndex( const QPersistentModelIndex& index )
     emit updateIndex( index );
 }
 
+
+bool
+TreeItemDelegate::editorEvent( QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index )
+{
+    Q_UNUSED( model );
+    Q_UNUSED( option );
+
+    if ( event->type() != QEvent::MouseButtonRelease &&
+         event->type() != QEvent::MouseMove &&
+         event->type() != QEvent::MouseButtonPress &&
+         event->type() != QEvent::Leave )
+        return false;
+
+    bool hoveringInfo = false;
+    if ( m_infoButtonRects.contains( index ) )
+    {
+        const QRect infoRect = m_infoButtonRects[ index ];
+        const QMouseEvent* ev = static_cast< QMouseEvent* >( event );
+        hoveringInfo = infoRect.contains( ev->pos() );
+    }
+
+    if ( event->type() == QEvent::MouseMove )
+    {
+        if ( hoveringInfo )
+            m_view->setCursor( Qt::PointingHandCursor );
+        else
+            m_view->setCursor( Qt::ArrowCursor );
+
+        if ( m_hoveringOver != index )
+        {
+            PlayableItem* item = m_model->sourceModel()->itemFromIndex( m_model->mapToSource( index ) );
+            item->requestRepaint();
+            m_hoveringOver = index;
+            emit updateIndex( m_hoveringOver );
+        }
+
+        event->accept();
+        return true;
+    }
+
+    // reset mouse cursor. we switch to a pointing hand cursor when hovering an info button
+    m_view->setCursor( Qt::ArrowCursor );
+
+    if ( hoveringInfo )
+    {
+        if ( event->type() == QEvent::MouseButtonRelease )
+        {
+            PlayableItem* item = m_model->sourceModel()->itemFromIndex( m_model->mapToSource( index ) );
+            if ( !item )
+                return false;
+
+            if ( item->query() )
+            {
+                ViewManager::instance()->show( item->query()->track()->toQuery() );
+            }
+            else if ( item->artist() )
+            {
+                ViewManager::instance()->show( item->artist() );
+            }
+            else if ( item->album() )
+            {
+                ViewManager::instance()->show( item->album() );
+            }
+
+            event->accept();
+            return true;
+        }
+        else if ( event->type() == QEvent::MouseButtonPress )
+        {
+            // Stop the whole item from having a down click action as we just want the info button to be clicked
+            event->accept();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+void
+TreeItemDelegate::resetHoverIndex()
+{
+    m_hoveringOver = QModelIndex();
+    m_infoButtonRects.clear();
+}

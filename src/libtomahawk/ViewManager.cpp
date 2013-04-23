@@ -3,6 +3,7 @@
  *   Copyright 2010-2011, Christian Muehlhaeuser <muesli@tomahawk-player.org>
  *   Copyright 2010-2011, Jeff Mitchell <jeff@tomahawk-player.org>
  *   Copyright 2010-2012, Leo Franchi   <lfranchi@kde.org>
+ *   Copyright 2013,      Teo Mrnjavac <teo@kde.org>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -37,6 +38,8 @@
 #include "SourceList.h"
 #include "TomahawkSettings.h"
 
+#include "playlist/InboxModel.h"
+#include "playlist/InboxView.h"
 #include "playlist/PlaylistLargeItemDelegate.h"
 #include "playlist/RecentlyPlayedModel.h"
 #include "playlist/dynamic/widgets/DynamicWidget.h"
@@ -76,8 +79,9 @@ ViewManager::ViewManager( QObject* parent )
     , m_widget( new QWidget() )
     , m_welcomeWidget( new WelcomeWidget() )
     , m_whatsHotWidget( 0 )
-    , m_newReleasesWidget( new NewReleasesWidget() )
+    , m_newReleasesWidget( 0 )
     , m_recentPlaysWidget( 0 )
+    , m_inboxWidget( 0 )
     , m_currentPage( 0 )
     , m_loaded( false )
 {
@@ -86,6 +90,11 @@ ViewManager::ViewManager( QObject* parent )
     m_widget->setLayout( new QVBoxLayout() );
     m_infobar = new InfoBar();
     m_stack = new QStackedWidget();
+
+    m_inboxModel = new InboxModel( this );
+    m_inboxModel->setTitle( tr( "Inbox" ) );
+    m_inboxModel->setDescription( tr( "Listening suggestions from your friends" ) );
+    m_inboxModel->setIcon( TomahawkUtils::defaultPixmap( TomahawkUtils::Inbox ) );
 
     m_contextWidget = new ContextWidget();
 
@@ -110,7 +119,6 @@ ViewManager::ViewManager( QObject* parent )
     connect( &m_filterTimer, SIGNAL( timeout() ), SLOT( applyFilter() ) );
     connect( m_infobar, SIGNAL( filterTextChanged( QString ) ), SLOT( setFilter( QString ) ) );
 
-    connect( this, SIGNAL( tomahawkLoaded() ), m_newReleasesWidget, SLOT( fetchData() ) );
     connect( this, SIGNAL( tomahawkLoaded() ), m_welcomeWidget, SLOT( loadData() ) );
 
 /*    connect( m_infobar, SIGNAL( flatMode() ), SLOT( setTableMode() ) );
@@ -125,6 +133,7 @@ ViewManager::~ViewManager()
     delete m_newReleasesWidget;
     delete m_welcomeWidget;
     delete m_recentPlaysWidget;
+    delete m_inboxWidget;
     delete m_contextWidget;
     delete m_widget;
 }
@@ -147,6 +156,29 @@ ViewManager::createPageForPlaylist( const playlist_ptr& playlist )
 
     model->loadPlaylist( playlist );
     playlist->resolve();
+
+    return view;
+}
+
+
+FlexibleView*
+ViewManager::createPageForList( const QString& title, const QList< query_ptr >& queries )
+{
+    FlexibleView* view = new FlexibleView();
+    PlaylistModel* model = new PlaylistModel();
+
+    PlaylistView* pv = new PlaylistView();
+    view->setDetailedView( pv );
+    view->setPixmap( pv->pixmap() );
+    view->setEmptyTip( tr( "This playlist is empty!" ) );
+    view->setTemporaryPage( true );
+
+    // We need to set the model on the view before loading the playlist, so spinners & co are connected
+    view->setPlaylistModel( model );
+    pv->setPlaylistModel( model );
+
+    model->setTitle( title );
+    model->appendQueries( queries );
 
     return view;
 }
@@ -387,6 +419,13 @@ ViewManager::showWhatsHotPage()
 Tomahawk::ViewPage*
 ViewManager::showNewReleasesPage()
 {
+
+    if ( !m_newReleasesWidget )
+    {
+        m_newReleasesWidget = new NewReleasesWidget();
+        m_newReleasesWidget->fetchData();
+    }
+
     return show( m_newReleasesWidget );
 }
 
@@ -417,6 +456,37 @@ ViewManager::showRecentPlaysPage()
     }
 
     return show( m_recentPlaysWidget );
+}
+
+
+Tomahawk::ViewPage *
+ViewManager::showInboxPage()
+{
+    if ( !m_inboxWidget )
+    {
+        TrackView* inboxView = new InboxView( m_widget );
+
+        PlaylistLargeItemDelegate* delegate =
+                new PlaylistLargeItemDelegate( PlaylistLargeItemDelegate::Inbox,
+                                               inboxView,
+                                               inboxView->proxyModel() );
+        connect( delegate, SIGNAL( updateIndex( QModelIndex ) ),
+                 inboxView, SLOT( update( QModelIndex ) ) );
+        inboxView->setItemDelegate( delegate );
+
+        inboxView->setPlayableModel( m_inboxModel );
+        inboxView->setEmptyTip( tr( "No listening suggestions here." ) );
+
+        inboxView->setGuid( "inbox" );
+
+        inboxView->proxyModel()->setStyle( PlayableProxyModel::Large );
+        inboxView->setSortingEnabled( false );
+        inboxView->setHeaderHidden( true );
+
+        m_inboxWidget = inboxView;
+    }
+
+    return show( m_inboxWidget );
 }
 
 
@@ -502,6 +572,7 @@ ViewManager::destroyPage( ViewPage* page )
         return;
 
     tDebug() << Q_FUNC_INFO << "Deleting page:" << page->title();
+
     if ( historyPages().contains( page ) )
     {
         m_pageHistoryBack.removeAll( page );
@@ -517,6 +588,10 @@ ViewManager::destroyPage( ViewPage* page )
 
         historyBack();
     }
+
+    emit viewPageAboutToBeDestroyed( page );
+    delete page;
+    emit viewPageDestroyed();
 }
 
 
@@ -653,6 +728,7 @@ ViewManager::onWidgetDestroyed( QWidget* widget )
 
         m_pageHistoryBack.removeAll( page );
         m_pageHistoryFwd.removeAll( page );
+        break;
     }
 
     m_stack->removeWidget( widget );
@@ -800,9 +876,21 @@ ViewManager::recentPlaysWidget() const
     return m_recentPlaysWidget;
 }
 
+Tomahawk::ViewPage*
+ViewManager::inboxWidget() const
+{
+    return m_inboxWidget;
+}
+
 
 Tomahawk::ViewPage*
 ViewManager::superCollectionView() const
 {
     return m_superCollectionView;
+}
+
+InboxModel*
+ViewManager::inboxModel()
+{
+    return m_inboxModel;
 }

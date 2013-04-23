@@ -28,6 +28,7 @@
 #include "items/CategoryItems.h"
 #include "items/TemporaryPageItem.h"
 #include "items/ScriptCollectionItem.h"
+#include "items/InboxItem.h"
 
 #include "audio/AudioEngine.h"
 #include "AnimationHelper.h"
@@ -229,9 +230,13 @@ SourceDelegate::paintCollection( QPainter* painter, const QStyleOptionViewItem& 
 
     QRect textRect = option.rect.adjusted( iconRect.width() + 8, 6, -figWidth - ( figWidth ? 28 : 0 ), 0 );
     QString text = painter->fontMetrics().elidedText( name, Qt::ElideRight, textRect.width() );
-    painter->drawText( textRect, text );
+    {
+        QTextOption to;
+        to.setWrapMode( QTextOption::NoWrap );
+        painter->drawText( textRect, text, to );
+    }
 
-    QColor descColor = QColor( "#8d8d8d" );
+    QColor descColor = option.palette.color( QPalette::Text ).lighter( 180 );
     if ( type == SourcesModel::ScriptCollection && //you cannot select a non-script collection anyway
          option.state.testFlag( QStyle::State_Selected ) )
     {
@@ -300,7 +305,7 @@ SourceDelegate::paintCollection( QPainter* painter, const QStyleOptionViewItem& 
                 m_lockRects.remove( index );
 
             if ( isPlaying )
-                descColor = Qt::black;
+                descColor = option.palette.color( QPalette::Text );
         }
     }
 
@@ -312,10 +317,12 @@ SourceDelegate::paintCollection( QPainter* painter, const QStyleOptionViewItem& 
     }
     textRect.adjust( 0, 0, 0, 2 );
     text = painter->fontMetrics().elidedText( desc, Qt::ElideRight, textRect.width() - 8 );
-    QTextOption to( Qt::AlignVCenter );
-    to.setWrapMode( QTextOption::NoWrap );
-    painter->setPen( descColor );
-    painter->drawText( textRect, text, to );
+    {
+        QTextOption to( Qt::AlignVCenter );
+        to.setWrapMode( QTextOption::NoWrap );
+        painter->setPen( descColor );
+        painter->drawText( textRect, text, to );
+    }
 
     bool shouldPaintTrackCount = false;
     if ( type == SourcesModel::Collection )
@@ -632,7 +639,36 @@ SourceDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, co
         if ( !index.parent().parent().isValid() )
             o.rect.adjust( 7, 0, 0, 0 );
 
-        if ( type == SourcesModel::TemporaryPage )
+        if ( type == SourcesModel::Inbox )
+        {
+            InboxItem* ii = qobject_cast< InboxItem* >( item );
+            if ( ii && ii->unlistenedCount() )
+            {
+                painter->setRenderHint( QPainter::Antialiasing );
+
+                QFont figFont = option.font;
+                figFont.setFamily( "Arial Bold" );
+                figFont.setWeight( QFont::Black );
+                figFont.setPointSize( option.font.pointSize() - 1 );
+
+                QString count = QString::number( ii->unlistenedCount() );
+                int figWidth = QFontMetrics( figFont ).width( count );
+
+                QRect figRect = option.rect.adjusted( option.rect.width() - figWidth - 13, 0, -14, -option.rect.height() + option.fontMetrics.height() * 1.1 );
+                int hd = ( option.rect.height() - figRect.height() ) / 2;
+                figRect.adjust( 0, hd, 0, hd );
+
+                painter->setFont( figFont );
+
+                QColor figColor( 239, 140, 51 );
+                painter->setPen( figColor );
+                painter->setBrush( figColor );
+
+                TomahawkUtils::drawBackgroundAndNumbers( painter, count, figRect );
+            }
+            QStyledItemDelegate::paint( painter, o, index );
+        }
+        else if ( type == SourcesModel::TemporaryPage )
         {
             TemporaryPageItem* gpi = qobject_cast< TemporaryPageItem* >( item );
             Q_ASSERT( gpi );
@@ -689,12 +725,23 @@ SourceDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, co
 void
 SourceDelegate::updateEditorGeometry( QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-    if ( index.data( SourcesModel::SourceTreeItemTypeRole ).toInt() == SourcesModel::StaticPlaylist )
-        editor->setGeometry( option.rect.adjusted( 20, 0, 0, 0 ) );
+    SourcesModel::RowType type = static_cast< SourcesModel::RowType >( index.data( SourcesModel::SourceTreeItemTypeRole ).toInt() );
+    if ( type == SourcesModel::StaticPlaylist ||
+         type == SourcesModel::AutomaticPlaylist ||
+         type == SourcesModel::Station )
+    {
+        QRect newGeometry = option.rect.adjusted( 20, 0, 0, 0 ); //room for the icon
+
+#ifdef Q_OS_MAC
+        newGeometry.adjust( 3 * TREEVIEW_INDENT_ADD + 5, 0, 0, 0 );  //compensate for osx indentation
+#else
+        newGeometry.adjust( 3 * TREEVIEW_INDENT_ADD, 0, 0, 0 );  //compensate for indentation
+#endif
+        editor->setGeometry( newGeometry );
+    }
     else
         QStyledItemDelegate::updateEditorGeometry( editor, option, index );
 
-    editor->setGeometry( editor->geometry().adjusted( 2 * TREEVIEW_INDENT_ADD, 0, 0, 0 ) );
 }
 
 

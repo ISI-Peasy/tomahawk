@@ -119,12 +119,13 @@ private:
     PeerInfo( SipPlugin* parent, const QString& id );
     void announce();
 
-    static QHash< QString, peerinfo_ptr > s_peersByCacheKey;
+    static QHash< QString, peerinfo_wptr > s_peersByCacheKey;
     static QHash< SipPlugin*, peerinfo_ptr > s_selfPeersBySipPlugin;
 
     QWeakPointer< Tomahawk::PeerInfo > m_ownRef;
     QPointer< ControlConnection > m_controlConnection;
 
+    SipPlugin* m_parent;
     PeerInfo::Type m_type;
 
     QString m_id;
@@ -137,8 +138,9 @@ private:
 
     mutable QPixmap* m_avatar;
     mutable QPixmap* m_fancyAvatar;
+
+    mutable QByteArray m_avatarBuffer;
     mutable QByteArray m_avatarHash;
-    mutable bool m_avatarUpdated;
     mutable QHash< TomahawkUtils::ImageMode, QHash< int, QPixmap > > m_coverCache;
 };
 

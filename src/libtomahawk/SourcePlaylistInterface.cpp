@@ -37,7 +37,7 @@ SourcePlaylistInterface::SourcePlaylistInterface( Tomahawk::Source* source, Toma
     setLatchMode( latchMode );
 
     if ( !m_source.isNull() )
-        connect( m_source.data(), SIGNAL( playbackStarted( const Tomahawk::query_ptr& ) ), SLOT( onSourcePlaybackStarted( const Tomahawk::query_ptr& ) ) );
+        connect( m_source.data(), SIGNAL( playbackStarted( const Tomahawk::track_ptr& ) ), SLOT( onSourcePlaybackStarted( const Tomahawk::track_ptr& ) ) );
 
     if ( AudioEngine::instance() )
         connect( AudioEngine::instance(), SIGNAL( paused() ), SLOT( audioPaused() ) );
@@ -164,9 +164,11 @@ SourcePlaylistInterface::reset()
 
 
 void
-SourcePlaylistInterface::onSourcePlaybackStarted( const Tomahawk::query_ptr& query )
+SourcePlaylistInterface::onSourcePlaybackStarted( const Tomahawk::track_ptr& track )
 {
-    tDebug( LOGEXTRA ) << Q_FUNC_INFO;
+    tDebug( LOGVERBOSE ) << Q_FUNC_INFO;
+
+    query_ptr query = track->toQuery();
     connect( query.data(), SIGNAL( resolvingFinished( bool ) ), SLOT( resolvingFinished( bool ) ) );
     Pipeline::instance()->resolve( query );
     m_gotNextItem = false;
@@ -176,7 +178,7 @@ SourcePlaylistInterface::onSourcePlaybackStarted( const Tomahawk::query_ptr& que
 void
 SourcePlaylistInterface::resolvingFinished( bool hasResults )
 {
-    tDebug( LOGEXTRA ) << Q_FUNC_INFO << "Has results?" << ( hasResults ? "true" : "false" );
+    tDebug( LOGVERBOSE ) << Q_FUNC_INFO << "Has results?" << ( hasResults ? "true" : "false" );
     if ( hasResults )
     {
         m_gotNextItem = true;

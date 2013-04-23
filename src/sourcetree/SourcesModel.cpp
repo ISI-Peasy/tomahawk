@@ -32,6 +32,7 @@
 #include "sourcetree/items/GenericPageItems.h"
 #include "sourcetree/items/HistoryItem.h"
 #include "sourcetree/items/LovedTracksItem.h"
+#include "sourcetree/items/InboxItem.h"
 #include "SourceList.h"
 #include "Playlist.h"
 #include "collection/Collection.h"
@@ -325,6 +326,9 @@ SourcesModel::appendGroups()
                                                 boost::bind( &ViewManager::showNewReleasesPage, ViewManager::instance() ),
                                                 boost::bind( &ViewManager::newReleasesWidget, ViewManager::instance() ) );
     newReleases->setSortValue( 5 );
+
+    InboxItem* inbox = new InboxItem( this, browse );
+    inbox->setSortValue( 6 );
 
     m_collectionsGroup = new GroupItem( this, m_rootItem, tr( "Friends" ), 4 );
 
