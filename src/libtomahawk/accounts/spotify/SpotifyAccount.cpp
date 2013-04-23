@@ -950,7 +950,7 @@ SpotifyAccount::resolverMessage( const QString &msgType, const QVariantMap &msg 
             QList<query_ptr> qs = SpotifyPlaylistUpdater::variantToQueries( tracksList );
             foreach ( const query_ptr& query, qs )
             {
-                query->setLoved( love );
+                query->track()->setLoved( love );
             }
         }
     }
@@ -1394,6 +1394,18 @@ SpotifyAccount::sendMessage( const QVariantMap &m, QObject* obj, const QString& 
     m_spotifyResolver.data()->sendMessage( msg );
 
     return qid;
+}
+
+bool
+SpotifyAccount::hasPlaylist(const QString& plId)
+{
+    return m_updaters.contains( plId );
+}
+
+Tomahawk::playlist_ptr
+SpotifyAccount::playlistForURI(const QString& plId)
+{
+    return m_updaters[ plId ]->playlist();
 }
 
 

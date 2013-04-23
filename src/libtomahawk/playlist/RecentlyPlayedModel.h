@@ -47,7 +47,7 @@ private slots:
     void onSourcesReady();
     void onSourceAdded( const Tomahawk::source_ptr& source );
 
-    void onPlaybackFinished( const Tomahawk::query_ptr& query );
+    void onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log );
     void loadHistory();
 
 private:

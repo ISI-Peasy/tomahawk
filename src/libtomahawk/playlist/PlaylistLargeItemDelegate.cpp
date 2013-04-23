@@ -108,7 +108,31 @@ PlaylistLargeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem&
     Q_ASSERT( item );
 
     QStyleOptionViewItemV4 opt = option;
-    prepareStyleOption( &opt, index, item );
+
+    bool isUnlistened = true;
+    if( m_mode == Inbox )
+    {
+        QList< Tomahawk::SocialAction > socialActions = item->query()->queryTrack()->allSocialActions();
+        foreach( const Tomahawk::SocialAction& sa, socialActions )
+        {
+            if ( sa.action.toString() == "Inbox" && sa.value.toBool() == false )
+            {
+                isUnlistened = false;
+                break;
+            }
+        }
+
+        if ( isUnlistened && ! item->isPlaying() )
+        {
+            prepareStyleOption( &opt, index, item );
+            opt.backgroundBrush = QColor( Qt::yellow ).lighter( 185 );
+        }
+        else
+            prepareStyleOption( &opt, index, item );
+    }
+    else
+        prepareStyleOption( &opt, index, item );
+
     opt.text.clear();
 
     qApp->style()->drawControl( QStyle::CE_ItemViewItem, &opt, painter );
@@ -116,23 +140,18 @@ PlaylistLargeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem&
     if ( m_view->header()->visualIndex( index.column() ) > 0 )
         return;
 
-    const query_ptr q = item->query()->displayQuery();
-    const QString artist = q->artist();
-    const QString album = q->album();
-    const QString track = q->track();
-    int duration = q->duration();
+    const track_ptr track = item->query()->track();
     QString lowerText;
 
     QSize avatarSize( 32, 32 );
-    source_ptr source = item->query()->playedBy().first;
-    if ( m_mode == RecentlyPlayed && !source.isNull() )
+    if ( m_mode == RecentlyPlayed && item->playbackLog().source )
     {
-        QString playtime = TomahawkUtils::ageToString( QDateTime::fromTime_t( item->query()->playedBy().second ), true );
+        QString playtime = TomahawkUtils::ageToString( QDateTime::fromTime_t( item->playbackLog().timestamp ), true );
 
-        if ( source == SourceList::instance()->getLocal() )
+        if ( item->playbackLog().source->isLocal() )
             lowerText = QString( tr( "played %1 by you", "e.g. played 3 hours ago by you" ) ).arg( playtime );
         else
-            lowerText = QString( tr( "played %1 by %2", "e.g. played 3 hours ago by SomeSource" ) ).arg( playtime ).arg( source->friendlyName() );
+            lowerText = QString( tr( "played %1 by %2", "e.g. played 3 hours ago by SomeSource" ) ).arg( playtime ).arg( item->playbackLog().source->friendlyName() );
     }
 
     if ( m_mode == LatestAdditions && item->query()->numResults() )
@@ -143,19 +162,25 @@ PlaylistLargeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem&
     }
 
     if ( m_mode == LovedTracks )
-        lowerText = item->query()->socialActionDescription( "Love", Query::Detailed );
+        lowerText = item->query()->queryTrack()->socialActionDescription( "Love", Track::Detailed );
+    else if ( m_mode == Inbox )
+        lowerText = item->query()->queryTrack()->socialActionDescription( "Inbox", Track::Detailed );
 
     painter->save();
     {
         QRect r = opt.rect.adjusted( 4, 6, 0, -6 );
 
         // Paint Now Playing Speaker Icon
-        if ( item->isPlaying() )
+        if ( item->isPlaying() ||
+             ( m_mode == Inbox && isUnlistened ) )
         {
             const int pixMargin = 4;
             const int pixHeight = r.height() - pixMargin * 2;
             QRect npr = r.adjusted( pixMargin, pixMargin + 1, pixHeight - r.width() + pixMargin, -pixMargin + 1 );
-            painter->drawPixmap( npr, TomahawkUtils::defaultPixmap( TomahawkUtils::NowPlayingSpeaker, TomahawkUtils::Original, npr.size() ) );
+            if ( item->isPlaying() )
+                painter->drawPixmap( npr, TomahawkUtils::defaultPixmap( TomahawkUtils::NowPlayingSpeaker, TomahawkUtils::Original, npr.size() ) );
+            else
+                painter->drawPixmap( npr, TomahawkUtils::defaultPixmap( TomahawkUtils::NewReleases, TomahawkUtils::Original, npr.size() ) );
             r.adjust( pixHeight + 8, 0, 0, 0 );
         }
 
@@ -190,24 +215,48 @@ PlaylistLargeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem&
         smallFont.setPointSize( TomahawkUtils::defaultFontSize() - 1 );
 
         r.adjust( pixmapRect.width() + 12, 1, - 16, 0 );
-        QRect leftRect = r.adjusted( 0, 0, -48, 0 );
-        QRect rightRect = r.adjusted( r.width() - smallBoldFontMetrics.width( TomahawkUtils::timeToString( duration ) ), 0, 0, 0 );
+        QRect rightRect = r.adjusted( r.width() - smallBoldFontMetrics.width( TomahawkUtils::timeToString( track->duration() ) ), 0, 0, 0 );
+        QRect leftRect = r.adjusted( 0, 0, -( rightRect.width() + 8 ), 0 );
+
+        const int sourceIconSize = avatarRect.width() - 6;
+
+        if ( hoveringOver() == index && !index.data().toString().isEmpty() && index.column() == 0 )
+        {
+            const QPixmap infoIcon = TomahawkUtils::defaultPixmap( TomahawkUtils::InfoIcon, TomahawkUtils::Original, QSize( sourceIconSize, sourceIconSize ) );
+            QRect arrowRect = QRect( rightRect.right() - sourceIconSize, r.center().y() - sourceIconSize / 2, infoIcon.width(), infoIcon.height() );
+            painter->drawPixmap( arrowRect, infoIcon );
+
+            setInfoButtonRect( index, arrowRect );
+            rightRect.moveLeft( rightRect.left() - infoIcon.width() - 8 );
+            leftRect.adjust( 0, 0, -( infoIcon.width() + 8 ), 0 );
+        }
+        else if ( item->query()->numResults() && !item->query()->results().first()->sourceIcon( TomahawkUtils::RoundedCorners, QSize( sourceIconSize, sourceIconSize ) ).isNull() )
+        {
+            const QPixmap sourceIcon = item->query()->results().first()->sourceIcon( TomahawkUtils::RoundedCorners, QSize( sourceIconSize, sourceIconSize ) );
+            painter->setOpacity( 0.8 );
+            painter->drawPixmap( QRect( rightRect.right() - sourceIconSize, r.center().y() - sourceIconSize / 2, sourceIcon.width(), sourceIcon.height() ), sourceIcon );
+            painter->setOpacity( 1.0 );
+
+            rightRect.moveLeft( rightRect.left() - sourceIcon.width() - 8 );
+            leftRect.adjust( 0, 0, -( sourceIcon.width() + 8 ), 0 );
+        }
 
         painter->setFont( boldFont );
-        QString text = painter->fontMetrics().elidedText( track, Qt::ElideRight, leftRect.width() );
+        QString text = painter->fontMetrics().elidedText( track->track(), Qt::ElideRight, leftRect.width() );
         painter->drawText( leftRect, text, m_topOption );
 
         painter->setFont( smallFont );
         QTextDocument textDoc;
-        if ( album.isEmpty() )
-            textDoc.setHtml( tr( "by <b>%1</b>", "e.g. by SomeArtist" ).arg( artist ) );
+        if ( track->album().isEmpty() )
+            textDoc.setHtml( tr( "by <b>%1</b>", "e.g. by SomeArtist" ).arg( track->artist() ) );
         else
-            textDoc.setHtml( tr( "by <b>%1</b> on <b>%2</b>", "e.g. by SomeArtist on SomeAlbum" ).arg( artist ).arg( album ) );
+            textDoc.setHtml( tr( "by <b>%1</b> on <b>%2</b>", "e.g. by SomeArtist on SomeAlbum" ).arg( track->artist() ).arg( track->album() ) );
         textDoc.setDocumentMargin( 0 );
         textDoc.setDefaultFont( painter->font() );
         textDoc.setDefaultTextOption( m_topOption );
 
-        drawRichText( painter, opt, leftRect.adjusted( 0, boldFontMetrics.height() + 1, 0, 0 ), Qt::AlignTop, textDoc );
+        if ( textDoc.idealWidth() <= leftRect.width() )
+            drawRichText( painter, opt, leftRect.adjusted( 0, boldFontMetrics.height() + 1, 0, 0 ), Qt::AlignTop, textDoc );
 
         if ( !( option.state & QStyle::State_Selected || item->isPlaying() ) )
             painter->setPen( Qt::gray );
@@ -218,25 +267,15 @@ PlaylistLargeItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem&
         textDoc.setDefaultTextOption( m_bottomOption );
 
         if ( textDoc.idealWidth() > leftRect.width() )
-            textDoc.setHtml( item->query()->socialActionDescription( "Love", Query::Short ) );
+            textDoc.setHtml( item->query()->queryTrack()->socialActionDescription( "Love", Track::Short ) );
 
         drawRichText( painter, opt, leftRect, Qt::AlignBottom, textDoc );
 
-        const int sourceIconSize = avatarRect.width() - 6;
-        if ( q->numResults() && !q->results().first()->sourceIcon( TomahawkUtils::RoundedCorners, QSize( sourceIconSize, sourceIconSize ) ).isNull() )
-        {
-            const QPixmap sourceIcon = q->results().first()->sourceIcon( TomahawkUtils::RoundedCorners, QSize( sourceIconSize, sourceIconSize ) );
-            painter->setOpacity( 0.8 );
-            painter->drawPixmap( QRect( rightRect.right() - sourceIconSize, r.center().y() - sourceIconSize / 2, sourceIcon.width(), sourceIcon.height() ), sourceIcon );
-            painter->setOpacity( 1.0 );
-            rightRect.moveLeft( rightRect.left() - sourceIcon.width() - 8 );
-        }
-
-        if ( duration > 0 )
+        if ( track->duration() > 0 )
         {
             painter->setPen( opt.palette.text().color() );
             painter->setFont( smallBoldFont );
-            painter->drawText( rightRect, TomahawkUtils::timeToString( duration ), m_centerRightOption );
+            painter->drawText( rightRect, TomahawkUtils::timeToString( track->duration() ), m_centerRightOption );
         }
     }
     painter->restore();

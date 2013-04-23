@@ -22,7 +22,7 @@ ELSE()
 ENDIF()
 
 SET( TOMAHAWK_VERSION_MAJOR 0 )
-SET( TOMAHAWK_VERSION_MINOR 6 )
+SET( TOMAHAWK_VERSION_MINOR 7 )
 SET( TOMAHAWK_VERSION_PATCH 99 )
 #SET( TOMAHAWK_VERSION_RC 0 )
 
@@ -241,7 +241,7 @@ ENDIF( WIN32 )
 #TODO: support external qxt
 set(QXTWEB_FOUND TRUE)
 set(QXTWEB_LIBRARIES qxtweb-standalone)
-set(QXTWEB_INCLUDE_DIRS ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/qxtweb ${CMAKE_CURRENT_BINARY_DIR})
+set(QXTWEB_INCLUDE_DIRS ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/web ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/network ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/core ${CMAKE_CURRENT_BINARY_DIR})
 
 ### libportfwd
 set(LIBPORTFWD_INCLUDE_DIR ${THIRDPARTY_DIR}/libportfwd/include)

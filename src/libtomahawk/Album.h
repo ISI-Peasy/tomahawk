@@ -68,6 +68,9 @@ public:
 
     void loadId( bool autoCreate );
 
+public slots:
+    void deleteLater();
+
 signals:
     void tracksAdded( const QList<Tomahawk::query_ptr>& tracks, Tomahawk::ModelMode mode, const Tomahawk::collection_ptr& collection );
     void updated();
@@ -106,8 +109,8 @@ private:
 
     QWeakPointer< Tomahawk::Album > m_ownRef;
 
-    static QHash< QString, album_ptr > s_albumsByName;
-    static QHash< unsigned int, album_ptr > s_albumsById;
+    static QHash< QString, album_wptr > s_albumsByName;
+    static QHash< unsigned int, album_wptr > s_albumsById;
 
     friend class ::IdThreadWorker;
 };

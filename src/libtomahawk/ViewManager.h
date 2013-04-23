@@ -17,8 +17,8 @@
  *   along with Tomahawk. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLAYLISTMANAGER_H
-#define PLAYLISTMANAGER_H
+#ifndef VIEWMANAGER_H
+#define VIEWMANAGER_H
 
 #include <QObject>
 #include <QHash>
@@ -55,6 +55,7 @@ class NewReleasesWidget;
 class WelcomeWidget;
 class WhatsHotWidget;
 class QPushButton;
+class InboxModel;
 
 namespace Tomahawk
 {
@@ -92,6 +93,9 @@ public:
     Tomahawk::ViewPage* newReleasesWidget() const;
     Tomahawk::ViewPage* recentPlaysWidget() const;
     Tomahawk::ViewPage* superCollectionView() const;
+    Tomahawk::ViewPage* inboxWidget() const;
+
+    InboxModel* inboxModel();
 
     /// Get the view page for the given item. Not pretty...
     Tomahawk::ViewPage* pageForPlaylist( const Tomahawk::playlist_ptr& pl ) const;
@@ -105,6 +109,8 @@ public:
     // linked to the sidebar. call it right after creating the playlist
     FlexibleView* createPageForPlaylist( const Tomahawk::playlist_ptr& playlist );
 
+    FlexibleView* createPageForList( const QString& title, const QList< Tomahawk::query_ptr >& queries );
+
     bool isTomahawkLoaded() const { return m_loaded; }
 
 signals:
@@ -115,6 +121,8 @@ signals:
 
     void tempPageActivated( Tomahawk::ViewPage* );
     void viewPageActivated( Tomahawk::ViewPage* );
+    void viewPageAboutToBeDestroyed( Tomahawk::ViewPage* );
+    void viewPageDestroyed();
 
     void showQueueRequested();
     void hideQueueRequested();
@@ -130,6 +138,7 @@ public slots:
     Tomahawk::ViewPage* showWhatsHotPage();
     Tomahawk::ViewPage* showNewReleasesPage();
     Tomahawk::ViewPage* showRecentPlaysPage();
+    Tomahawk::ViewPage* showInboxPage();
     void showCurrentTrack();
 
     // Returns the shown viewpage
@@ -181,6 +190,8 @@ private:
     WhatsHotWidget* m_whatsHotWidget;
     NewReleasesWidget* m_newReleasesWidget;
     Tomahawk::ViewPage* m_recentPlaysWidget;
+    Tomahawk::ViewPage* m_inboxWidget;
+    InboxModel* m_inboxModel;
 
     QList< Tomahawk::collection_ptr > m_superCollections;
 
@@ -206,4 +217,4 @@ private:
     static ViewManager* s_instance;
 };
 
-#endif // PLAYLISTMANAGER_H
+#endif // VIEWMANAGER_H

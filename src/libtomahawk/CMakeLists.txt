@@ -40,9 +40,12 @@ set( libGuiSources
     jobview/LatchedStatusItem.cpp
     jobview/ErrorStatusMessage.cpp
     jobview/IndexingJobItem.cpp
+    jobview/InboxJobItem.cpp
 
     infobar/InfoBar.cpp
 
+    playlist/InboxModel.cpp
+    playlist/InboxView.cpp
     playlist/FlexibleHeader.cpp
     playlist/FlexibleView.cpp
     playlist/TreeModel.cpp
@@ -99,6 +102,7 @@ set( libGuiSources
     utils/SpotifyParser.cpp
     utils/M3uLoader.cpp
     utils/ItunesParser.cpp
+    utils/ItunesLoader.cpp
     utils/RdioParser.cpp
     utils/ShortenedLinkParser.cpp
     utils/SoundcloudParser.cpp
@@ -190,6 +194,7 @@ list(APPEND libSources
     Result.cpp
     Session.cpp
     Source.cpp
+    Track.cpp
     SourcePlaylistInterface.cpp
     PlaylistInterface.cpp
 
@@ -271,6 +276,9 @@ list(APPEND libSources
     database/DatabaseCommand_TrackAttributes.cpp
     database/DatabaseCommand_SetTrackAttributes.cpp
     database/DatabaseCommand_PlaybackCharts.cpp
+    database/DatabaseCommand_ShareTrack.cpp
+    database/DatabaseCommand_DeleteInboxEntry.cpp
+    database/DatabaseCommand_ModifyInboxEntry.cpp
     database/Database.cpp
     database/TomahawkSqlQuery.cpp
     database/IdThreadWorker.cpp
@@ -504,6 +512,7 @@ file( GLOB accountsHeaders "accounts/*.h" )
 file( GLOB accountsLastfmHeaders "accounts/lastfm/*.h" )
 file( GLOB accountsSpotifyHeaders "accounts/spotify/*.h" )
 file( GLOB audioHeaders "audio/*.h" )
+file( GLOB collectionHeaders "collection/*.h" )
 file( GLOB contextHeaders "context/*.h" )
 file( GLOB contextPagesHeaders "context/pages/*.h" )
 file( GLOB databaseHeaders "database/*.h" )
@@ -533,6 +542,7 @@ install( FILES ${accountsHeaders} DESTINATION include/libtomahawk/accounts )
 install( FILES ${accountsLastfmHeaders} DESTINATION include/libtomahawk/accounts/lastfm )
 install( FILES ${accountsSpotifyHeaders} DESTINATION include/libtomahawk/accounts/spotify )
 install( FILES ${audioHeaders} DESTINATION include/libtomahawk/audio )
+install( FILES ${collectionHeaders} DESTINATION include/libtomahawk/collection )
 install( FILES ${contextHeaders} DESTINATION include/libtomahawk/context )
 install( FILES ${contextPagesHeaders} DESTINATION include/libtomahawk/context/pages )
 install( FILES ${databaseHeaders} DESTINATION include/libtomahawk/database )

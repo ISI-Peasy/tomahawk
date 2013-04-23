@@ -25,6 +25,7 @@
 #include "SourceList.h"
 #include "Typedefs.h"
 #include "Artist.h"
+#include "Track.h"
 
 #include "DllMacro.h"
 
@@ -61,20 +62,20 @@ public:
 
     /**
      * \brief Overloaded constructor for DatabaseCommand_SocialAction.
-     * \param query A Tomahawk Query object.
+     * \param track A Tomahawk Track object.
      * \param action Name of the social action to be written to the database.
      * \param comment Comment associated with this social action.
      * \param parent Parent class.
      *
      * Constructor which creates a new database command for the specified social action.
      */
-    explicit DatabaseCommand_SocialAction( const Tomahawk::query_ptr& query, QString action, QString comment = "", QObject* parent = 0 )
-        : DatabaseCommandLoggable( parent ), m_query( query ), m_action( action )
+    explicit DatabaseCommand_SocialAction( const Tomahawk::track_ptr& track, QString action, QString comment = "", QObject* parent = 0 )
+        : DatabaseCommandLoggable( parent ), m_track( track ), m_action( action )
     {
         setSource( SourceList::instance()->getLocal() );
 
-        setArtist( query->artist() );
-        setTrack( query->track() );
+        setArtist( track->artist() );
+        setTrack( track->track() );
         setComment( comment );
         setTimestamp( QDateTime::currentDateTime().toTime_t() );
     }
@@ -104,28 +105,28 @@ public:
      * \return Name of the artist.
      * \see setArtist()
      */
-    QString artist() const { return m_artist; }
+    virtual QString artist() const { return m_artist; }
 
     /**
      * \brief Sets the artist name for this database command.
      * \param s QString containing the artist name.
      * \see artist()
      */
-    void setArtist( const QString& s ) { m_artist = s; }
+    virtual void setArtist( const QString& s ) { m_artist = s; }
 
     /**
      * \brief Returns the track name associated with this social action.
      * \return QString containing the track name.
      * \see setTrack()
      */
-    QString track() const { return m_track; }
+    virtual QString track() const { return m_title; }
 
     /**
      * \brief Sets the track name associated with this database command.
      * \param track QString containing the track name.
      * \see track()
      */
-    void setTrack( const QString& track ) { m_track = track; }
+    virtual void setTrack( const QString& title ) { m_title = title; }
 
     /**
      * \brief Returns the social action for this database command instance.
@@ -146,40 +147,41 @@ public:
      * \return QString containing comment associated with this social action.
      * \see setComment()
      */
-    QString comment() const { return m_comment; }
+    virtual QString comment() const { return m_comment; }
 
     /**
      * \brief Sets the comment associated with this social action.
      * \param com Comment associated with this social action.
      * \see comment()
      */
-    void setComment( const QString& com ) { m_comment = com; }
+    virtual void setComment( const QString& com ) { m_comment = com; }
 
     /**
      * \brief Returns the timestamp associated with this social action.
      * \return unsigned integer containing timestamp
      * \see setTimesetamp()
      */
-    int timestamp() const { return m_timestamp; }
+    virtual int timestamp() const { return m_timestamp; }
 
     /**
      * \brief Sets the timestamp associated with this social action.
      * \param ts unsigned integer associated with this social action.
      * \see timestamp()
      */
-    void setTimestamp( const int ts ) { m_timestamp = ts; }
+    virtual void setTimestamp( const int ts ) { m_timestamp = ts; }
 
     virtual bool doesMutates() const { return true; }
     virtual bool groupable() const { return true; }
 
-private:
-    Tomahawk::query_ptr m_query;
+protected:
+    Tomahawk::track_ptr m_track;
 
+private:
     QString m_artist;
-    QString m_track;
+    QString m_title;
     int m_timestamp;
     QString m_comment;
-    QString m_action;
+    QString m_action; //! currently used values: Love, Inbox
 };
 
 #endif // DATABASECOMMAND_SOCIALACTION_H

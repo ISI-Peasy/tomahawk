@@ -25,8 +25,6 @@
 #include "PlayableProxyModel.h"
 #include "PlayableItem.h"
 #include "DropJob.h"
-#include "Artist.h"
-#include "Album.h"
 #include "Source.h"
 #include "TomahawkSettings.h"
 #include "audio/AudioEngine.h"
@@ -154,14 +152,14 @@ TrackView::setProxyModel( PlayableProxyModel* model )
         disconnect( m_proxyModel, SIGNAL( rowsInserted( QModelIndex, int, int ) ), this, SLOT( verifySize() ) );
         disconnect( m_proxyModel, SIGNAL( rowsRemoved( QModelIndex, int, int ) ), this, SLOT( verifySize() ) );
     }
-    
+
     m_proxyModel = model;
 
     connect( m_proxyModel, SIGNAL( filterChanged( QString ) ), SLOT( onFilterChanged( QString ) ) );
     connect( m_proxyModel, SIGNAL( rowsInserted( QModelIndex, int, int ) ), SLOT( onViewChanged() ) );
     connect( m_proxyModel, SIGNAL( rowsInserted( QModelIndex, int, int ) ), SLOT( verifySize() ) );
     connect( m_proxyModel, SIGNAL( rowsRemoved( QModelIndex, int, int ) ), SLOT( verifySize() ) );
-    
+
     m_delegate = new PlaylistItemDelegate( this, m_proxyModel );
     setItemDelegate( m_delegate );
 
@@ -360,6 +358,7 @@ TrackView::tryToPlayItem( const QModelIndex& index )
     PlayableItem* item = m_model->itemFromIndex( m_proxyModel->mapToSource( index ) );
     if ( item && !item->query().isNull() )
     {
+        m_model->setCurrentIndex( m_proxyModel->mapToSource( index ) );
         AudioEngine::instance()->playItem( playlistInterface(), item->query() );
 
         return true;
@@ -564,6 +563,16 @@ TrackView::paintEvent( QPaintEvent* event )
 
 
 void
+TrackView::wheelEvent( QWheelEvent* event )
+{
+    QTreeView::wheelEvent( event );
+
+    m_delegate->resetHoverIndex();
+    repaint();
+}
+
+
+void
 TrackView::onFilterChanged( const QString& )
 {
     if ( selectedIndexes().count() )
@@ -652,10 +661,7 @@ TrackView::onCustomContextMenu( const QPoint& pos )
         PlayableItem* item = proxyModel()->itemFromIndex( proxyModel()->mapToSource( index ) );
         if ( item && !item->query().isNull() )
         {
-            if ( item->query()->numResults() > 0 )
-                queries << item->query()->results().first()->toQuery();
-            else
-                queries << item->query();
+            queries << item->query();
         }
     }
 
@@ -679,105 +685,6 @@ TrackView::onMenuTriggered( int action )
 
         default:
             break;
-    }
-}
-
-
-void
-TrackView::updateHoverIndex( const QPoint& pos )
-{
-    QModelIndex idx = indexAt( pos );
-
-    if ( idx != m_hoveredIndex )
-    {
-        m_hoveredIndex = idx;
-        repaint();
-    }
-
-    if ( !m_model || m_proxyModel->style() != PlayableProxyModel::Detailed )
-        return;
-
-    if ( idx.column() == PlayableModel::Artist || idx.column() == PlayableModel::Album || idx.column() == PlayableModel::Track )
-    {
-        if ( pos.x() > header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) - 16 &&
-             pos.x() < header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) )
-        {
-            setCursor( Qt::PointingHandCursor );
-            return;
-        }
-    }
-
-    if ( cursor().shape() != Qt::ArrowCursor )
-        setCursor( Qt::ArrowCursor );
-}
-
-
-void
-TrackView::wheelEvent( QWheelEvent* event )
-{
-    QTreeView::wheelEvent( event );
-
-    if ( m_hoveredIndex.isValid() )
-    {
-        m_hoveredIndex = QModelIndex();
-        repaint();
-    }
-}
-
-
-void
-TrackView::leaveEvent( QEvent* event )
-{
-    QTreeView::leaveEvent( event );
-    updateHoverIndex( QPoint( -1, -1 ) );
-}
-
-
-void
-TrackView::mouseMoveEvent( QMouseEvent* event )
-{
-    QTreeView::mouseMoveEvent( event );
-    updateHoverIndex( event->pos() );
-}
-
-
-void
-TrackView::mousePressEvent( QMouseEvent* event )
-{
-    QTreeView::mousePressEvent( event );
-
-    if ( !m_model || m_proxyModel->style() != PlayableProxyModel::Detailed )
-        return;
-
-    QModelIndex idx = indexAt( event->pos() );
-    if ( event->pos().x() > header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) - 16 &&
-         event->pos().x() < header()->sectionViewportPosition( idx.column() ) + header()->sectionSize( idx.column() ) )
-    {
-        PlayableItem* item = proxyModel()->itemFromIndex( proxyModel()->mapToSource( idx ) );
-        switch ( idx.column() )
-        {
-            case PlayableModel::Artist:
-            {
-                ViewManager::instance()->show( Artist::get( item->query()->displayQuery()->artist() ) );
-                break;
-            }
-
-            case PlayableModel::Album:
-            {
-                artist_ptr artist = Artist::get( item->query()->displayQuery()->artist() );
-                ViewManager::instance()->show( Album::get( artist, item->query()->displayQuery()->album() ) );
-                break;
-            }
-
-            case PlayableModel::Track:
-            {
-                ViewManager::instance()->show( item->query()->displayQuery() );
-                break;
-            }
-
-            default:
-                break;
-        }
     }
 }
 

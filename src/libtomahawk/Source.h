@@ -113,8 +113,8 @@ signals:
 
     void stats( const QVariantMap& );
 
-    void playbackStarted( const Tomahawk::query_ptr& query );
-    void playbackFinished( const Tomahawk::query_ptr& query );
+    void playbackStarted( const Tomahawk::track_ptr& track );
+    void playbackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log );
 
     void stateChanged();
     void commandsFinished();
@@ -138,14 +138,16 @@ private slots:
 
     void onStateChanged( DBSyncConnection::State newstate, DBSyncConnection::State oldstate, const QString& info );
 
-    void onPlaybackStarted( const Tomahawk::query_ptr& query, unsigned int duration );
-    void onPlaybackFinished( const Tomahawk::query_ptr& query );
+    void onPlaybackStarted( const Tomahawk::track_ptr& track, unsigned int duration );
+    void onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log );
     void trackTimerFired();
 
     void executeCommands();
     void addCommand( const QSharedPointer<DatabaseCommand>& command );
 
 private:
+    static bool friendlyNamesLessThan( const QString& first, const QString& second ); //lessThan for sorting
+
     void updateTracks();
     void reportSocialAttributesChanged( DatabaseCommand_SocialAction* action );
 

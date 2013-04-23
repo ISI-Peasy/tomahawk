@@ -55,6 +55,11 @@ public:
     void setStationsCategory( CategoryItem* item );
     void setPlaylistsCategory( CategoryItem* item );
 
+    virtual bool willAcceptDrag( const QMimeData* data ) const;
+    virtual bool dropMimeData( const QMimeData* data, Qt::DropAction action );
+    virtual DropTypes supportedDropTypes( const QMimeData* data ) const;
+    virtual Qt::ItemFlags flags() const;
+
 public slots:
     virtual void activate();
 
@@ -89,6 +94,8 @@ private slots:
 
     Tomahawk::ViewPage* recentPlaysClicked();
     Tomahawk::ViewPage* getRecentPlaysPage() const;
+
+    void onTracksDropped( const QList< Tomahawk::query_ptr >& queries );
 
 private:
     void playlistsAddedInternal( SourceTreeItem* parent, const QList< Tomahawk::dynplaylist_ptr >& playlists );

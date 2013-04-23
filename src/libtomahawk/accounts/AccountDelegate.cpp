@@ -242,7 +242,8 @@ AccountDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, 
         {
             Q_ASSERT( accts.size() == 1 );
 
-            rightEdge = drawStatus( painter, QPointF( rightEdge, center - painter->fontMetrics().height()/2 ), accts.first(), true );
+            painter->setFont( installFont );
+            rightEdge = drawStatus( painter, QPointF( rightEdge - PADDING, center - painter->fontMetrics().height()/2 ), accts.first(), true );
         }
     }
     else if ( canDelete )
@@ -418,8 +419,10 @@ AccountDelegate::drawAccountList( QPainter* painter, QStyleOptionViewItemV4& opt
 
     for ( int i = 0; i < accts.size(); i++ )
     {
+        //FIXME: special case for twitter, remove for 0.8.0
+        if ( accts.at( i )->accountServiceName() != "Twitter" )
         // draw lightbulb and text
-        runningRightEdge = drawStatus( painter, QPointF( rightEdge - PADDING, current), accts.at( i ) );
+            runningRightEdge = drawStatus( painter, QPointF( rightEdge - PADDING, current), accts.at( i ) );
 
         const QString label = accts.at( i )->accountFriendlyName();
         const QPoint textTopLeft( runningRightEdge - PADDING - painter->fontMetrics().width( label ), current);

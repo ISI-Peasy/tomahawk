@@ -20,6 +20,7 @@
  */
 
 #include "DropJob.h"
+#include <QFileInfo>
 
 #include "Artist.h"
 #include "Album.h"
@@ -27,6 +28,7 @@
 
 #include "utils/SpotifyParser.h"
 #include "utils/ItunesParser.h"
+#include "utils/ItunesLoader.h"
 #include "utils/RdioParser.h"
 #include "utils/M3uLoader.h"
 #include "utils/ShortenedLinkParser.h"
@@ -112,18 +114,26 @@ DropJob::acceptsMimeData( const QMimeData* data, DropJob::DropTypes acceptedType
 
 
     const QString url = data->data( "text/plain" );
+    const QString urlList = data->data( "text/uri-list" ).trimmed();
+
     if ( acceptedType.testFlag( Playlist ) )
     {
+        if ( url.contains( "xml" ) && url.contains( "iTunes" ) )
+            return validateLocalFile( url, "xml" );
+
+        if (  urlList.contains( "xml" ) &&  urlList.contains( "iTunes" ) )
+            return validateLocalFiles( urlList, "xml" );
+
         if ( url.contains( "xspf" ) )
             return true;
 
         if ( url.contains( "m3u" ) )
             return true;
 
-        if ( data->data( "text/uri-list" ).contains( "xspf" ) )
+        if ( urlList.contains( "m3u" ) )
             return true;
 
-        if ( data->data( "text/uri-list" ).contains( "m3u" ) )
+        if ( urlList.contains( "xspf" ) )
             return true;
 
         // Not the most elegant
@@ -145,7 +155,7 @@ DropJob::acceptsMimeData( const QMimeData* data, DropJob::DropTypes acceptedType
         if ( url.contains( "m3u" ) )
             return true;
 
-        if ( data->data( "text/uri-list" ).contains( "m3u" ) )
+        if ( urlList.contains( "m3u" ) )
             return true;
 
         if ( url.contains( "itunes" ) && url.contains( "album" ) ) // YES itunes is fucked up and song links have album/ in the url.
@@ -199,15 +209,44 @@ DropJob::acceptsMimeData( const QMimeData* data, DropJob::DropTypes acceptedType
 
 
 bool
+DropJob::validateLocalFile( const QString &path, const QString &suffix )
+{
+    QFileInfo info( QUrl::fromUserInput( path ).toLocalFile() );
+    if ( suffix.isEmpty() )
+        return info.exists();
+    return ( info.exists() && info.suffix() == suffix );
+}
+
+
+bool
+DropJob::validateLocalFiles(const QString &paths, const QString &suffix)
+{
+    QStringList filePaths = paths.split( QRegExp( "\\s+" ), QString::SkipEmptyParts );
+    for ( QStringList::iterator it = filePaths.begin(); it != filePaths.end(); ++it )
+        if ( !validateLocalFile( *it, suffix ) )
+            filePaths.erase( it );
+    return !filePaths.isEmpty();
+}
+
+
+bool
 DropJob::isDropType( DropJob::DropType desired, const QMimeData* data )
 {
     const QString url = data->data( "text/plain" );
+    const QString urlList = data->data( "text/uri-list" ).trimmed();
+
     if ( desired == Playlist )
     {
-        if( url.contains( "xspf" ) || data->data( "text/uri-list").contains( "xspf" ) )
+        if ( url.contains( "xml" ) && url.contains( "iTunes" ) )
+            return validateLocalFile( url, "xml" );
+
+        if ( urlList.contains( "xml" ) && urlList.contains( "iTunes" ) )
+            return validateLocalFiles( urlList, "xml" );
+
+        if( url.contains( "xspf" ) || urlList.contains( "xspf" ) )
             return true;
 
-        if( url.contains( "m3u" ) || data->data( "text/uri-list").contains( "m3u" ) )
+        if( url.contains( "m3u" ) || urlList.contains( "m3u" ) )
             return true;
 
         // Not the most elegant
@@ -321,15 +360,15 @@ DropJob::tracksFromQueryList( const QMimeData* data )
 
             if ( m_top10 )
             {
-                queries << getTopTen( query->data()->artist() );
+                queries << getTopTen( query->data()->track()->artist() );
             }
             else if ( m_getWholeArtists )
             {
-                queries << getArtist( query->data()->artist() );
+                queries << getArtist( query->data()->track()->artist() );
             }
             else if ( m_getWholeAlbums )
             {
-                queries << getAlbum( query->data()->artist(), query->data()->album() );
+                queries << getAlbum( query->data()->track()->artist(), query->data()->track()->album() );
             }
             else
             {
@@ -357,24 +396,23 @@ DropJob::tracksFromResultList( const QMimeData* data )
         result_ptr* result = reinterpret_cast<result_ptr*>(qptr);
         if ( result && !result->isNull() )
         {
-            tDebug() << "Dropped result item:" << result->data()->artist()->name() << "-" << result->data()->track();
-            query_ptr q = result->data()->toQuery();
+            tDebug() << "Dropped result item:" << result->data()->track()->artist() << "-" << result->data()->track()->track();
 
             if ( m_top10 )
             {
-                getTopTen( q->artist() );
+                getTopTen( result->data()->track()->artist() );
             }
             else if ( m_getWholeArtists )
             {
-                queries << getArtist( q->artist() );
+                queries << getArtist( result->data()->track()->artist() );
             }
             else if ( m_getWholeAlbums )
             {
-                queries << getAlbum( q->artist(), q->album() );
+                queries << getAlbum( result->data()->track()->artist(), result->data()->track()->album() );
             }
             else
             {
-                queries << q;
+                queries << result->data()->toQuery();
             }
         }
     }
@@ -449,7 +487,7 @@ DropJob::tracksFromMixedData( const QMimeData *data )
         QDataStream singleStream( &singleData, QIODevice::WriteOnly );
 
         QMimeData singleMimeData;
-        if ( mimeType == "application/tomahawk.query.list" ) 
+        if ( mimeType == "application/tomahawk.query.list" )
         {
             qlonglong query;
             stream >> query;
@@ -682,7 +720,13 @@ DropJob::handleAllUrls( const QString& urls )
 void
 DropJob::handleTrackUrls( const QString& urls )
 {
-    if ( urls.contains( "itunes.apple.com") )
+
+    if ( urls.contains( "xml" ) && urls.contains( "iTunes" ) )
+    {
+        QStringList paths = urls.split( QRegExp( "\\s+" ), QString::SkipEmptyParts );
+        new ItunesLoader( paths.first(), this );
+    }
+    else if ( urls.contains( "itunes.apple.com") )
     {
         QStringList tracks = urls.split( QRegExp( "\\s+" ), QString::SkipEmptyParts );
 
@@ -753,7 +797,7 @@ void
 DropJob::onTracksAdded( const QList<Tomahawk::query_ptr>& tracksList )
 {
     tDebug() << Q_FUNC_INFO << tracksList.count();
-    
+
 #ifndef ENABLE_HEADLESS
 /*    if ( results.isEmpty() )
     {
@@ -797,7 +841,7 @@ DropJob::removeDuplicates()
             m_resultList.removeOne( item );
             continue;
         }
-        
+
         foreach( const Tomahawk::query_ptr &tmpItem, list )
         {
             if ( tmpItem.isNull() )
@@ -805,10 +849,10 @@ DropJob::removeDuplicates()
                 list.removeOne( tmpItem );
                 continue;
             }
-            
-            if ( item->album() == tmpItem->album()
-                 && item->artist() == tmpItem->artist()
-                 && item->track() == tmpItem->track() )
+
+            if ( item->track()->album() == tmpItem->track()->album()
+                 && item->track()->artist() == tmpItem->track()->artist()
+                 && item->track()->track() == tmpItem->track()->track() )
             {
                 if ( item->playable() && !tmpItem->playable() )
                     list.replace( list.indexOf( tmpItem ), item );
@@ -837,7 +881,7 @@ DropJob::removeRemoteSources()
             m_resultList.removeOne( item );
             continue;
         }
-        
+
         bool hasLocalSource = false;
         foreach ( const Tomahawk::result_ptr& result, item->results() )
         {
