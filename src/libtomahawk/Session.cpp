@@ -26,6 +26,13 @@ Session::getSessionSource()
     return query->playedBy().first;
 }
 
+QPixmap
+Session::getCover(QSize & size)
+{
+    Tomahawk::Query *query = m_queries.first().data();
+    return query->cover(size);
+}
+
 void
 Session::addQuery( Tomahawk::query_ptr q )
 {

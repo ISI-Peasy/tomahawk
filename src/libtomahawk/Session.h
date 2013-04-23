@@ -18,6 +18,7 @@ public:
     Tomahawk::source_ptr getSessionSource();
     QString getPredominantArtist();
     QString getPredominantAlbum();
+    QPixmap getCover(QSize & size);
     int getStartTime();
     int getEndTime();
     int count();
