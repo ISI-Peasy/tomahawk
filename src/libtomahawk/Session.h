@@ -9,21 +9,27 @@
 
 class Session : public QObject
 {
-    Q_OBJECT
+Q_OBJECT
 public:
     explicit Session();
+    explicit Session(const Session& copy);
+    virtual ~Session();
+
     //Session* operator<<( Tomahawk::query_ptr query );
+    bool operator<(const Session s);
     void addQuery( Tomahawk::query_ptr q );
+
     QString getSessionOwner();
-    Tomahawk::source_ptr getSessionSource();
     QString getPredominantArtist();
     QString getPredominantAlbum();
     QPixmap getCover(QSize & size);
+    Tomahawk::source_ptr getSessionSource();
+    QList< Tomahawk::query_ptr > getTracks() const;
+
     int getStartTime();
     int getEndTime();
     int count();
-    QList< Tomahawk::query_ptr > getTracks();
-    bool operator<(const Session s);
+
 private:
     QList< Tomahawk::query_ptr > m_queries;
 signals:
@@ -31,6 +37,9 @@ signals:
 public slots:
     
 };
+
+Q_DECLARE_METATYPE ( Session* ) ;
+Q_DECLARE_METATYPE ( Session ) ;
 
 class SessionGreatThan
 {

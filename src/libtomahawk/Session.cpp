@@ -6,6 +6,15 @@ Session::Session()
     m_queries = QList< Tomahawk::query_ptr >();
 }
 
+Session::Session(const Session& copy)
+{
+    m_queries = QList< Tomahawk::query_ptr >(copy.getTracks()) ;
+}
+
+Session::~Session() {
+
+}
+
 //Session* Session::operator<<( Tomahawk::query_ptr query )
 //{
 //    m_queries << query;
@@ -115,7 +124,7 @@ Session::count()
 }
 
 QList< Tomahawk::query_ptr >
-Session::getTracks()
+Session::getTracks() const
 {
     return m_queries;
 }
