@@ -73,42 +73,12 @@ SessionHistoryModel::retrievePlayBackSongs()
     cmd->setLimit( m_limit );
 
     // Collect the return from db into SessionsFromQueries to build sessions
-    connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ),
-                    SLOT( sessionsFromQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
+    connect( cmd, SIGNAL( tracksSession( QList<Tomahawk::track_ptr> , QList<Tomahawk::PlaybackLog>  ) ),
+                    SLOT( sessionsFromQueries( QList<Tomahawk::track_ptr> ,
+                                               QList<Tomahawk::PlaybackLog> ) ), Qt::QueuedConnection );
 
     Database::instance()->enqueue( QSharedPointer<DatabaseCommand>( cmd ) );
 }
-
-void
-SessionHistoryModel::retrieveLovedSongs()
-{
-    QString sql;
-    if ( m_source.isNull() )
-    {
-        sql = QString( "SELECT track.name, artist.name, source, COUNT(*) as counter "
-                       "FROM social_attributes, track, artist "
-                       "WHERE social_attributes.id = track.id AND artist.id = track.artist AND social_attributes.k = 'Love' AND social_attributes.v = 'true' "
-                       "GROUP BY track.id "
-                       "ORDER BY counter DESC, social_attributes.timestamp DESC LIMIT 0, 50" );
-    }
-    else
-    {
-        sql = QString( "SELECT track.name, artist.name, COUNT(*) as counter "
-                       "FROM social_attributes, track, artist "
-                       "WHERE social_attributes.id = track.id AND artist.id = track.artist AND social_attributes.k = 'Love' AND social_attributes.v = 'true' AND social_attributes.source %1 "
-                       "GROUP BY track.id "
-                       "ORDER BY counter DESC, social_attributes.timestamp DESC " ).arg( m_source->isLocal() ? "IS NULL" : QString( "= %1" ).arg( m_source->id() ) );
-    }
-
-    DatabaseCommand_GenericSelect* cmd = new DatabaseCommand_GenericSelect( sql, DatabaseCommand_GenericSelect::Track, -1, 0 );
-    //connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ), this, SLOT( tracksLoaded( QList<Tomahawk::query_ptr> ) ) );
-
-    connect( cmd, SIGNAL( tracks( QList<Tomahawk::query_ptr> ) ),
-                    SLOT( sessionsFromQueries( QList<Tomahawk::query_ptr> ) ), Qt::QueuedConnection );
-
-    Database::instance()->enqueue( QSharedPointer<DatabaseCommand>( cmd ) );
-}
-
 
 void
 SessionHistoryModel::onSourcesReady()
@@ -146,23 +116,24 @@ SessionHistoryModel::setSource( const Tomahawk::source_ptr& source )
 void
 SessionHistoryModel::onSourceAdded( const Tomahawk::source_ptr& source )
 {
-    connect( source.data(), SIGNAL( playbackFinished( Tomahawk::query_ptr ) ), SLOT( onPlaybackFinished( Tomahawk::query_ptr ) ), Qt::UniqueConnection );
+    connect( source.data(), SIGNAL( playbackFinished( Tomahawk::track_ptr , Tomahawk::PlaybackLog ) ), SLOT( onPlaybackFinished( const Tomahawk::track_ptr, const Tomahawk::PlaybackLog) ), Qt::UniqueConnection );
 }
 
-
 void
-SessionHistoryModel::onPlaybackFinished( const Tomahawk::query_ptr& query )
+SessionHistoryModel::onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log )
 {
     loadHistory();
 }
 
 
 void
-SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries )
+SessionHistoryModel::sessionsFromQueries( const QList<Tomahawk::track_ptr>& tracks,
+                                          const QList<Tomahawk::PlaybackLog>& logs )
 {
     tDebug() << "Session Calculate From Queries Beginin" ;
 
-    if ( !queries.count() )
+    //if ( !queries.count() )
+    if ( !tracks.count() )
     {
         //emit itemCountChanged( rowCount( QModelIndex() ) ); // TODO : Replace
         //finishLoading(); // TODO : Replace
@@ -170,35 +141,33 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
     }
     else tDebug() << "Session Calculate starting" ;
 
-    tDebug() << "Number of Queries retireved" <<queries.count() ;
+    tDebug() << "Number of Queries retireved" <<tracks.count() ;
 
-    QList< Session* > sessions = QList< Session* >();
 
-    Session* oneSession = new Session();
-
-    QString currentPeer = QString();
     unsigned int lastTimeStamp = 0;
+    QString currentPeer = QString();
+    Session* oneSession = new Session();
+    QList< Session* > sessions = QList< Session* >();
+    QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> currentTrack ;
 
-    for( int i = 0 ; i < queries.count() ; i++ )
+    for( int i = 0 ; i < tracks.count() ; i++ )
     {
-        Tomahawk::query_ptr ptr_q = queries.at( i );
-        Tomahawk::Query *query = ptr_q.data();
+        currentTrack = QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog>( tracks.at(i) , logs.at(i) ) ;
 
         if( lastTimeStamp == 0 )
         {
-            lastTimeStamp = query->playedBy().second;
+            lastTimeStamp = currentTrack.second.timestamp  ;
         }
 
-        if( currentPeer == "")
+        if( currentPeer == "" )
         {
-            currentPeer = query->playedBy().first->friendlyName();
+            currentPeer = currentTrack.second.source->friendlyName() ;
         }
 
-        if( lastTimeStamp - query->playedBy().second < MAX_TIME_BETWEEN_TRACKS && currentPeer == query->playedBy().first->friendlyName() )
+        if( lastTimeStamp - currentTrack.second.timestamp < MAX_TIME_BETWEEN_TRACKS && currentPeer == currentTrack.second.source->friendlyName()  )
         {
             //it's the same session, we add it
-            oneSession->addQuery(ptr_q);
-
+            oneSession->addQuery(currentTrack);
         }
         else
         {
@@ -211,13 +180,11 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
 
             //new session
             oneSession = new Session();
-            currentPeer = query->playedBy().first->friendlyName();
+            currentPeer = currentTrack.second.source->friendlyName() ;
             //add the current query in the new session
-            oneSession->addQuery(ptr_q);
+            oneSession->addQuery(currentTrack);
         }
-
-        lastTimeStamp = query->playedBy().second + query->duration();
-
+        lastTimeStamp = currentTrack.second.timestamp + currentTrack.first->duration() ;
     }
 
     //add the last session in the session list only if session contains MIN_SESSION_COUNT at least
@@ -240,12 +207,12 @@ SessionHistoryModel::sessionsFromQueries( const QList< Tomahawk::query_ptr >& qu
         tDebug() << "session " << ( i + 1 ) << " : " << sessions.at(i)->getSessionOwner() << " [" <<  sessions.at(i)->count() << "]";
         //tDebug() << "   by Session : " << mySessions.at(i)->getSessionOwner() << " played " << mySessions.at(i)->getPredominantAlbum() << " of " << mySessions.at(i)->getPredominantArtist() << " from " << mySessions.at(i)->getStartTime() << " to " << mySessions.at(i)->getEndTime();
 
-        foreach ( const Tomahawk::query_ptr track, sessions.at(i)->getTracks() )
+        QPair<Tomahawk::track_ptr,Tomahawk::PlaybackLog> track ;
+        foreach ( track , sessions.at(i)->getTracks() )
         {
-            tDebug() << "   - " << track->artist() << track->track() << " from " << track->playedBy().first->friendlyName() << " played at " << track->playedBy().second ;
+            tDebug() << "   - " << track.first->artist() << track.first->track() << " from " << track.second.source->friendlyName()  << " played at " << track.second.timestamp ;
         };
     }
-
 }
 
 void

@@ -50,17 +50,17 @@ public:
 
 public slots:
     void setSource( const Tomahawk::source_ptr& source );
+    void loadHistory();
 
 private slots:
     void onSourcesReady();
     void onSourceAdded( const Tomahawk::source_ptr& source );
-    void onPlaybackFinished( const Tomahawk::query_ptr& query );
+    void onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log );
 
-    void loadHistory();
-    void retrieveLovedSongs() ;
     void retrievePlayBackSongs() ;
-    void sessionsFromQueries( const QList< Tomahawk::query_ptr >& queries ) ;
+    void sessionsFromQueries( const QList<Tomahawk::track_ptr>& tracks, const QList<Tomahawk::PlaybackLog>& logs ) ;
     void feedModelWithSessions ( const QList< Session* >& sessions ) ;
+
 
 private:
     unsigned int m_limit;

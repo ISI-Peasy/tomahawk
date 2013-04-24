@@ -4,6 +4,7 @@
 #include <QtCore/QObject>
 
 #include "Query.h"
+#include "Track.h"
 #include "utils/TomahawkUtils.h"
 
 
@@ -15,22 +16,22 @@ public:
     explicit Session(const Session& copy);
     virtual ~Session();
 
-    //Session* operator<<( Tomahawk::query_ptr query );
     bool operator<(const Session s);
-    void addQuery( Tomahawk::query_ptr q );
+    void addQuery( QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog>& track ) ;
 
     QString getSessionOwner();
     QString getPredominantArtist();
     QString getPredominantAlbum();
-    QPixmap getCover(QSize & size);
     Tomahawk::source_ptr getSessionSource();
-    QList< Tomahawk::query_ptr > getTracks() const;
+
+    QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> >getTracks() const;
 
     int getStartTime();
     int getEndTime();
     int count();
 
 private:
+    QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> > m_tracks ;
     QList< Tomahawk::query_ptr > m_queries;
 signals:
     

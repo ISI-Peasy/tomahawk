@@ -48,7 +48,7 @@ public:
 
     void inputComplete( const QString& errmsg = "" );
 
-    virtual bool isSequential() const { return false; }
+    virtual bool isSequential() const { return true; }
 
     static unsigned int blockSize();
 

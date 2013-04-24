@@ -236,7 +236,8 @@ AudioControls::onPlaybackStarted( const Tomahawk::result_ptr& result )
 
     //TODO : check if result.data()->duration() is always valid
     if ( duration <= 0 )
-        duration = result.data()->duration() * 1000;
+        //duration = result.data()->duration() * 1000;
+        duration = result->track()->duration() *1000 ;
 
     ui->seekSlider->setRange( 0, duration );
     ui->seekSlider->setValue( 0 );

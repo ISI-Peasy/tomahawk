@@ -4,11 +4,12 @@
 Session::Session()
 {
     m_queries = QList< Tomahawk::query_ptr >();
+    m_tracks = QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> >() ;
 }
 
 Session::Session(const Session& copy)
 {
-    m_queries = QList< Tomahawk::query_ptr >(copy.getTracks()) ;
+    m_tracks = QList< QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog> >(copy.getTracks()) ;
 }
 
 Session::~Session() {
@@ -24,28 +25,19 @@ Session::~Session() {
 QString
 Session::getSessionOwner()
 {
-    Tomahawk::Query *query = m_queries.first().data();
-    return query->playedBy().first->friendlyName();
+    return m_tracks.first().second.source->friendlyName() ;
 }
 
 Tomahawk::source_ptr
 Session::getSessionSource()
 {
-    Tomahawk::Query *query = m_queries.first().data();
-    return query->playedBy().first;
-}
-
-QPixmap
-Session::getCover(QSize & size)
-{
-    Tomahawk::Query *query = m_queries.first().data();
-    return query->cover(size);
+    return m_tracks.first().second.source ;
 }
 
 void
-Session::addQuery( Tomahawk::query_ptr q )
+Session::addQuery( QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog>& track )
 {
-    m_queries << q;
+    m_tracks << track ;
 }
 
 QString
@@ -56,10 +48,10 @@ Session::getPredominantArtist()
     int currentArtistOccurs = 0;
 
     //first, get all artists of the session
-    for( int i = 0; i < m_queries.count(); i++ )
+    for( int i = 0; i < m_tracks.count(); i++ )
     {
-        Tomahawk::Query *query = m_queries.at(i).data();
-        aSessionArtists << query->artist();
+        QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> track = m_tracks.at(i) ;
+        aSessionArtists << track.first->artist() ;
     }
 
     //then, compute the predominant artist
@@ -82,15 +74,14 @@ Session::getPredominantAlbum()
     int currentAlbumOccurs = 0;
 
     //first, get all albums of the session
-    for( int i = 0; i < m_queries.count(); i++ )
+      for( int i = 0; i < m_tracks.count(); i++ )
     {
-        Tomahawk::Query *query = m_queries.at(i).data();
-        if(query->album().size() > 0)
+        QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> track = m_tracks.at(i) ;
+        if(track.first->album().size() > 0)
         {
-            aSessionAlbum << query->album();
+            aSessionAlbum << track.first->album() ;
         }
     }
-
     //then, compute the predominant album
     for( int i = 0; i < aSessionAlbum.count(); i++ )
     {
@@ -106,27 +97,25 @@ Session::getPredominantAlbum()
 int
 Session::getStartTime()
 {
-    Tomahawk::Query *query = m_queries.first().data();
-    return query->playedBy().second;
+    return m_tracks.first().second.timestamp ;
 }
 
 int
 Session::getEndTime()
 {
-    Tomahawk::Query *query = m_queries.last().data();
-    return query->playedBy().second +  query->duration();
+    return m_tracks.last().second.timestamp ;
 }
 
 int
 Session::count()
 {
-    return m_queries.size();
+    return m_tracks.size() ;
 }
 
-QList< Tomahawk::query_ptr >
+QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> >
 Session::getTracks() const
 {
-    return m_queries;
+    return m_tracks;
 }
 
 bool
@@ -135,21 +124,21 @@ Session::operator<( Session s )
     return this->getEndTime() < s.getEndTime();
 }
 
-/*
-template <class Session> bool
-qGreater<Session>::operator()(const Session& s1, const Session& s2) const
-{
-    return s1->getEndTime() < s2->getEndTime();
-}
-*/
+
+//template <class Session> bool
+//qGreater<Session>::operator()(const Session& s1, const Session& s2) const
+//{
+//    return s1->getEndTime() < s2->getEndTime();
+//}
+
 
 SessionGreatThan::SessionGreatThan()
 {
-
 }
 
 bool
 SessionGreatThan::operator ()(Session* s1, Session* s2)
 {
-    return s1->getEndTime() > s2->getEndTime();
+    return s2 < s1 ;
 }
+

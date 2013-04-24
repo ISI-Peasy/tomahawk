@@ -16,7 +16,7 @@
  *   along with Tomahawk. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DATABASECOMMAND_PLAYBACKHISTORYSESSIONSH
+#ifndef DATABASECOMMAND_PLAYBACKHISTORYSESSIONS_H
 #define DATABASECOMMAND_PLAYBACKHISTORYSESSIONS_H
 
 #include <QObject>
@@ -24,6 +24,7 @@
 
 #include "DatabaseCommand.h"
 #include "Typedefs.h"
+#include "Track.h"
 
 #include "DllMacro.h"
 
@@ -46,7 +47,7 @@ public:
     void setLimit( unsigned int amount ) { m_amount = amount; }
 
 signals:
-    void tracks( const QList<Tomahawk::query_ptr>& queries );
+    void tracksSession( const QList<Tomahawk::track_ptr>& tracks, QList<Tomahawk::PlaybackLog> logs );
 
 private:
     unsigned int m_amount;
