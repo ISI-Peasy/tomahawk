@@ -57,6 +57,8 @@ private slots:
     void onSourceAdded( const Tomahawk::source_ptr& source );
     void onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log );
 
+
+    void retrieveLovedSongs() ;
     void retrievePlayBackSongs() ;
     void sessionsFromQueries( const QList<Tomahawk::track_ptr>& tracks, const QList<Tomahawk::PlaybackLog>& logs ) ;
     void feedModelWithSessions ( const QList< Session* >& sessions ) ;

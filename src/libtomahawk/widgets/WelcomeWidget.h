@@ -115,6 +115,7 @@ signals:
 public slots:
     void updatePlaylists();
     void updateRecentAdditions();
+    void onCoverLoaded();
 
     void loadData();
 

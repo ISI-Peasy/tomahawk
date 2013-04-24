@@ -26,6 +26,7 @@
 #include "TomahawkSettings.h"
 #include "RecentPlaylistsModel.h"
 #include "MetaPlaylistInterface.h"
+#include "Artist.h"
 
 #include "audio/AudioEngine.h"
 #include "playlist/AlbumModel.h"
@@ -158,6 +159,10 @@ WelcomeWidget::updateRecentAdditions()
     m_recentAlbumsModel->addFilteredCollection( collection_ptr(), 20, DatabaseCommand_AllAlbums::ModificationTime, true );
 }
 
+void WelcomeWidget::onCoverLoaded()
+{
+    m_sessionsModel->loadHistory();
+}
 
 void
 WelcomeWidget::updatePlaylists()
@@ -182,6 +187,7 @@ WelcomeWidget::onPlaylistActivated( const QModelIndex& item )
     else
         ViewManager::instance()->show( pl );
 }
+
 
 
 void
@@ -381,7 +387,15 @@ SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, c
     QPixmap icon;
     QRect pixmapRect = option.rect.adjusted( 10, 14, -option.rect.width() + option.rect.height() - 18, -14 );
 
-    icon = TomahawkUtils::defaultPixmap( TomahawkUtils::Playlist, TomahawkUtils::Original, pixmapRect.size() );
+    //    QFile file("iconLOL");
+    //    file.open(QIODevice::WriteOnly);
+    //    tDebug() << "almost any qt value object";
+    //    icon.save(&file, "PNG");
+
+    QString artist = index.data(SessionHistoryModel::SessionRole).toString();
+    icon = Artist::get(artist)->cover(pixmapRect.size());
+
+    connect(Artist::get(artist).data(),SIGNAL(coverChanged()), this->sender(), SLOT(onCoverLoaded()));
     painter->drawPixmap( pixmapRect, icon );
 
 
