@@ -204,8 +204,10 @@ SessionHistoryModel::sessionsFromQueries( const QList<Tomahawk::track_ptr>& trac
     tDebug() << "We have calculate " << sessions.count() << " sessions : ";
     for( int i = 0 ; i < sessions.count() ; i++ )
     {
-        tDebug() << "session " << ( i + 1 ) << " : " << sessions.at(i)->getSessionOwner() << " [" <<  sessions.at(i)->count() << "]";
-        //tDebug() << "   by Session : " << mySessions.at(i)->getSessionOwner() << " played " << mySessions.at(i)->getPredominantAlbum() << " of " << mySessions.at(i)->getPredominantArtist() << " from " << mySessions.at(i)->getStartTime() << " to " << mySessions.at(i)->getEndTime();
+        tDebug() << "session " << ( i + 1 ) << " : " << sessions.at(i)->getSessionOwner()
+                 << " played " << sessions.at(i)->getPredominantAlbum() << " of "
+                 << sessions.at(i)->getPredominantArtist() << " from " << sessions.at(i)->getStartTime()
+                 << " to " << sessions.at(i)->getEndTime() << " [" <<  sessions.at(i)->count() << "]";
 
         QPair<Tomahawk::track_ptr,Tomahawk::PlaybackLog> track ;
         foreach ( track , sessions.at(i)->getTracks() )

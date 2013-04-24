@@ -97,13 +97,13 @@ Session::getPredominantAlbum()
 int
 Session::getStartTime()
 {
-    return m_tracks.first().second.timestamp ;
+    return m_tracks.last().second.timestamp ;
 }
 
 int
 Session::getEndTime()
 {
-    return m_tracks.last().second.timestamp ;
+    return m_tracks.first().second.timestamp + m_tracks.first().second.secsPlayed;
 }
 
 int
