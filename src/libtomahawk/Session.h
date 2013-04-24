@@ -39,8 +39,8 @@ public slots:
     
 };
 
-Q_DECLARE_METATYPE ( Session* ) ;
-Q_DECLARE_METATYPE ( Session ) ;
+Q_DECLARE_METATYPE ( Session* )
+Q_DECLARE_METATYPE ( Session )
 
 class SessionGreatThan
 {

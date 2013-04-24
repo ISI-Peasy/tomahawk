@@ -137,8 +137,8 @@ SessionGreatThan::SessionGreatThan()
 }
 
 bool
-SessionGreatThan::operator ()(Session* s1, Session* s2)
+SessionGreatThan::operator ()( Session* s1, Session* s2 )
 {
-    return s2 < s1 ;
+    return s1->getEndTime() > s2->getEndTime();
 }
 
