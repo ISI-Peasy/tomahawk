@@ -34,6 +34,16 @@ Session::getSessionSource()
     return m_tracks.first().second.source ;
 }
 
+QList<Tomahawk::query_ptr>
+Session::getTrackstoQuery()
+{
+    QList<Tomahawk::query_ptr> queries = QList<Tomahawk::query_ptr>() ;
+    QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog> currentTrack ;
+
+    foreach (currentTrack , m_tracks) { queries << currentTrack.first->toQuery() ; };
+    return queries ;
+}
+
 void
 Session::addQuery( QPair<Tomahawk::track_ptr , Tomahawk::PlaybackLog>& track )
 {

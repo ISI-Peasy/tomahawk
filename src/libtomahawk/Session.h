@@ -23,6 +23,7 @@ public:
     QString getPredominantArtist();
     QString getPredominantAlbum();
     Tomahawk::source_ptr getSessionSource();
+    QList<Tomahawk::query_ptr> getTrackstoQuery();
 
     QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> >getTracks() const;
 
