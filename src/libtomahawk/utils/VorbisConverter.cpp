@@ -74,7 +74,7 @@ VorbisConverter::VorbisConverter(const Tomahawk::result_ptr& result, QObject *pa
         test = new QFile(m_mediaObject->currentSource().mrl().path() + ".ogg");
         test->open(ReadWrite);
         m_stream->open(QBuffer::ReadWrite);
-        m_vorbisWriter->open( m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO , -0.9);
+        m_vorbisWriter->open( m_audioDataOutput->sampleRate(), DEFAULT_IS_STEREO , 10);
     }
 
     tDebug() << "Data size : " << m_audioDataOutput->dataSize() << " with bitrate : " << m_audioDataOutput->sampleRate();
@@ -92,51 +92,78 @@ VorbisConverter::startConversion()
 }
 
 
-//qint64 VorbisConverter::readData(char *data, qint64 maxSize)
-//{
-//    int length = qMin(m_buffer.length(), (int) maxSize);
-//    memcpy(data, m_buffer.constData(), length);
-//    m_buffer.remove(0, length);
-//    test->write(data, length);
-//    return length;
-//}
-
-
-//qint64 VorbisConverter::writeData(const char *data, qint64 maxSize)
-//{
-//    //test->write(data, maxSize);
-//    m_buffer.append(data, maxSize);
-//    return maxSize;
-//}
-
-
 qint64 VorbisConverter::readData(char *data, qint64 maxSize)
 {
-    return m_stream->read(data, maxSize);
+    int length = qMin(m_buffer->length(), (int) maxSize);
+    memcpy(data, m_buffer->constData(), length);
+    m_buffer->remove(0, length);
+    //test->write(data, length);
+    return length;
 }
 
 
 qint64 VorbisConverter::writeData(const char *data, qint64 maxSize)
 {
-//    char* tmp = new char[maxSize];
-//    memcpy(tmp, data, maxSize);
-//    test->write(tmp, maxSize);
-//    return m_stream->write(tmp, maxSize);
-
+    //test->write(data, maxSize);
     m_buffer->append(data, maxSize);
     return maxSize;
 }
 
 
-bool VorbisConverter::seek ( qint64 pos )
+bool
+VorbisConverter::seek ( qint64 pos )
 {
-    return m_stream->seek(pos);
+    tDebug() << "Called seek for pos : " << pos << " result : " << false;
+    return false;
 }
+
+
+//qint64
+//VorbisConverter::readData(char *data, qint64 maxSize)
+//{
+//    return m_stream->read(data, maxSize);
+//}
+
+
+//qint64
+//VorbisConverter::writeData(const char *data, qint64 maxSize)
+//{
+////    char* tmp = new char[maxSize];
+////    memcpy(tmp, data, maxSize);
+////    test->write(tmp, maxSize);
+////    return m_stream->write(tmp, maxSize);
+
+//    m_buffer->append(data, maxSize);
+//    return maxSize;
+//}
+
+
+//bool
+//VorbisConverter::seek ( qint64 pos )
+//{
+//    bool result = m_stream->seek(pos);
+//    tDebug() << "Called seek for pos : " << pos << " result : " << result;
+//    return result;
+//}
 
 
 qint64 VorbisConverter::pos () const
 {
     return m_stream->pos();
+}
+
+
+qint64
+VorbisConverter::bytesAvailable() const
+{
+    return m_buffer->size() + QIODevice::bytesAvailable();
+}
+
+
+bool
+VorbisConverter::atEnd () const
+{
+    return m_atEnd;
 }
 
 
@@ -181,20 +208,6 @@ VorbisConverter::onEndOfMedia(int remainingSamples)
 {
     tDebug() << "End of media, with : " << remainingSamples ;
     m_remainingSamples = remainingSamples;
-}
-
-
-qint64
-VorbisConverter::bytesAvailable() const
-{
-    return m_buffer->size() + QIODevice::bytesAvailable();
-}
-
-
-bool
-VorbisConverter::atEnd () const
-{
-    return m_atEnd;
 }
 
 
