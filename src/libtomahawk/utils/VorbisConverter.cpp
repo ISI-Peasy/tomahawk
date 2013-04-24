@@ -66,9 +66,9 @@ VorbisConverter::VorbisConverter(const Tomahawk::result_ptr& result, QObject *pa
         connect( m_audioDataOutput, SIGNAL( endOfMedia(int) ), this, SLOT( onEndOfMedia(int) ) );
         connect( m_mediaObject, SIGNAL( stateChanged( Phonon::State, Phonon::State ) ), SLOT( onStateChanged( Phonon::State, Phonon::State ) ) );
 
-        m_vorbisWriter->addTag("ARTIST", result->artist()->name());
-        m_vorbisWriter->addTag("ALBUM", result->album()->name());
-        m_vorbisWriter->addTag("TITLE", result->track());
+        m_vorbisWriter->addTag("ARTIST", result->track()->artist());
+        m_vorbisWriter->addTag("ALBUM", result->track()->album());
+        m_vorbisWriter->addTag("TITLE", result->track()->track());
 
         tDebug() << "opening : " << m_mediaObject->currentSource().mrl().path() ;
         test = new QFile(m_mediaObject->currentSource().mrl().path() + ".ogg");
