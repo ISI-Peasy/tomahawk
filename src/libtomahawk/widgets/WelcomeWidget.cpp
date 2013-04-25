@@ -358,7 +358,6 @@ SessionDelegate::onCoverLoaded()
     tDebug() << "Passage dans le SLOT onCoverLoaded";
 }
 
-
 void
 SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
@@ -391,11 +390,22 @@ SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, c
     QPixmap icon;
     QRect pixmapRect = option.rect.adjusted( 10, 14, -option.rect.width() + option.rect.height() - 18, -14 );
     QString artist = index.data(SessionHistoryModel::SessionRole).toString();
-    icon = TomahawkUtils::createRoundedImage(Artist::get(artist)->cover(pixmapRect.size()),pixmapRect.size());
-    painter->drawPixmap( pixmapRect, icon );
+
+    icon = Artist::get(artist)->cover(pixmapRect.size());
+    if (  !icon ) {
+        icon = TomahawkUtils::defaultPixmap( TomahawkUtils::Playlist, TomahawkUtils::Original, pixmapRect.size() );
+    }
+//    tDebug() << "ARTISTEEEEE" << artist;
+//    tDebug() << "ART OBJ : " << Artist::get(artist)->name() ;
+//    QFile file("iconLOLO.png");
+//    file.open(QIODevice::WriteOnly);
+//    icon.save(&file, "PNG");
+//    file.close();
+//    tDebug() << "ICONNNNN" ;
+
+    painter->drawPixmap( pixmapRect, TomahawkUtils::createRoundedImage(icon,pixmapRect.size()) );
 
     connect(Artist::get(artist).data(),SIGNAL(coverChanged()), this, SLOT(onCoverLoaded()));
-
 
     QRect r( option.rect.width() - option.fontMetrics.height() * 2.5 - 10, option.rect.top() + option.rect.height() / 3 - option.fontMetrics.height(), option.fontMetrics.height() * 2.5, option.fontMetrics.height() * 2.5 );
     QPixmap avatar;
