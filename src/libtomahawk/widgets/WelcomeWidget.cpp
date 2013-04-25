@@ -454,10 +454,10 @@ void WelcomeWidget::on_sessionsView_doubleClicked(const QModelIndex &index)
     // Retrieve Session and fill the playlist
     Session* mySession = index.data(SessionHistoryModel::SessionItemRole).value<Session*>() ;
     source_ptr author = mySession->getSessionSource() ;
-    QString title = "SessionPlaylist" ;
+    QString title = "Session from : "+author->friendlyName() ;
     QList<Tomahawk::query_ptr> queries =  mySession->getTrackstoQuery() ;
 
-    playlist_ptr playlist = Tomahawk::Playlist::create( author, uuid(), title, "", "", false, queries);
+    playlist_ptr playlist = Tomahawk::Playlist::create( SourceList::instance()->getLocal(), uuid(), title, "", "", false, queries);
     ViewManager::instance()->show( playlist );
 
 }
