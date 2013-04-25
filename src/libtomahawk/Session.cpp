@@ -76,6 +76,24 @@ Session::getPredominantArtist()
     return currentArtist;
 }
 
+QList< QString >
+Session::getRecurentArtists( const int max ){
+    QList< QString > artists = QList< QString >();
+    for( int i = 0; i < m_tracks.count() && i < max; i++ )
+    {
+        QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> track = m_tracks.at(i) ;
+        if( artists.count( track.first->artist() ) == 0 )
+        {
+            artists << track.first->artist();
+        }
+        else
+        {
+            i--;
+        }
+    }
+    return artists;
+}
+
 QString
 Session::getPredominantAlbum()
 {

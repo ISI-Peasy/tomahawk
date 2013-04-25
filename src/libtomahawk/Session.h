@@ -21,6 +21,7 @@ public:
 
     QString getSessionOwner();
     QString getPredominantArtist();
+    QList< QString > getRecurentArtists( const int max = 3);
     QString getPredominantAlbum();
     Tomahawk::source_ptr getSessionSource();
     QList<Tomahawk::query_ptr> getTrackstoQuery();
