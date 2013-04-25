@@ -254,7 +254,7 @@ StreamConnection::handleMsg( msg_ptr msg )
     {
         m_badded += msg->payload().length() - 4;
         ( (BufferIODevice*)m_iodev.data() )->addData( m_curBlock++, msg->payload().mid( 4 ) );
-        test->write(msg->payload().mid( 4 ));
+        m_test->write(msg->payload().mid( 4 ));
     }
 
     //qDebug() << Q_FUNC_INFO << "flags" << (int) msg->flags()
@@ -270,7 +270,7 @@ StreamConnection::handleMsg( msg_ptr msg )
 
         shutdown();
         
-        test->close();
+        m_test->close();
     }
 }
 
