@@ -32,6 +32,8 @@ public:
     int getEndTime();
     int count();
 
+    bool trackExist( QString id );
+
 private:
     QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> > m_tracks ;
     QList< Tomahawk::query_ptr > m_queries;

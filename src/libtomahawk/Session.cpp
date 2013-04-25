@@ -102,7 +102,7 @@ Session::getPredominantAlbum()
     int currentAlbumOccurs = 0;
 
     //first, get all albums of the session
-      for( int i = 0; i < m_tracks.count(); i++ )
+    for( int i = 0; i < m_tracks.count(); i++ )
     {
         QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> track = m_tracks.at(i) ;
         if(track.first->album().size() > 0)
@@ -138,6 +138,20 @@ int
 Session::count()
 {
     return m_tracks.size() ;
+}
+
+bool
+Session::trackExist( QString id )
+{
+    for( int i = 0; i < m_tracks.count(); i++ )
+    {
+        QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> track = m_tracks.at(i) ;
+        if( track.first->id() == id )
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 QList < QPair <Tomahawk::track_ptr , Tomahawk::PlaybackLog> >

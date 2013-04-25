@@ -164,7 +164,10 @@ SessionHistoryModel::sessionsFromQueries( const QList<Tomahawk::track_ptr>& trac
         if( lastTimeStamp - currentTrack.second.timestamp < MAX_TIME_BETWEEN_TRACKS && currentPeer == currentTrack.second.source->friendlyName()  )
         {
             //it's the same session, we add it
-            oneSession->addQuery(currentTrack);
+            if( !oneSession->trackExist( currentTrack.first->id() ) )
+            {
+                oneSession->addQuery(currentTrack);
+            }
         }
         else
         {
