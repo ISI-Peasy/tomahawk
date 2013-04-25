@@ -38,7 +38,7 @@ Q_OBJECT
 
 public:
     enum ItemRoles
-    { SessionRole = Qt::DisplayRole , SourceRole, PlaytimeRole,SessionItemRole };
+    { SessionRole = Qt::DisplayRole , SourceRole, PlaytimeRole, SizeRole , SessionItemRole };
     explicit SessionHistoryModel( QObject* parent = 0 );
     virtual ~SessionHistoryModel();
 

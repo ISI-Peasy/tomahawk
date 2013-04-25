@@ -58,9 +58,7 @@ SessionHistoryModel::loadHistory()
 {
     if ( rowCount( QModelIndex() ) )
     {
-       //beginResetModel(); // usefull ?
     }
-    //startLoading(); // to replace
 
     retrievePlayBackSongs() ;
     //retrieveLovedSongs(); // TODO : Reason of segfault : to debug
@@ -123,6 +121,7 @@ void
 SessionHistoryModel::onPlaybackFinished( const Tomahawk::track_ptr& track, const Tomahawk::PlaybackLog& log )
 {
     loadHistory();
+    //emit dataChanged(); TODO
 }
 
 
@@ -248,7 +247,7 @@ SessionHistoryModel::data( const QModelIndex& index, int role ) const
     }
     case SessionRole:
     {
-        return QVariant(mySession->getPredominantArtist()) ;
+        return QVariant(mySession->getPredominantArtist()+" : "+QString::number(mySession->count())) ;
     }
     case PlaytimeRole:
     {
@@ -257,6 +256,10 @@ SessionHistoryModel::data( const QModelIndex& index, int role ) const
     case SessionItemRole:
     {
         return QVariant::fromValue(mySession);
+    }
+    case SizeRole:
+    {
+        return QVariant(mySession->count()) ;
     }
     default:
         return QVariant();
