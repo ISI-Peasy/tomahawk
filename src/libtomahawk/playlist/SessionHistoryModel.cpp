@@ -59,9 +59,7 @@ SessionHistoryModel::loadHistory()
     if ( rowCount( QModelIndex() ) )
     {
     }
-
     retrievePlayBackSongs() ;
-    //retrieveLovedSongs(); // TODO : Reason of segfault : to debug
 }
 
 void

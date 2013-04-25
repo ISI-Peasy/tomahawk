@@ -22,6 +22,7 @@
 #include "ui_WelcomeWidget.h"
 
 #include "ViewManager.h"
+#include "playlist/FlexibleView.h"
 #include "SourceList.h"
 #include "TomahawkSettings.h"
 #include "RecentPlaylistsModel.h"
@@ -467,7 +468,7 @@ void WelcomeWidget::on_sessionsView_doubleClicked(const QModelIndex &index)
     QString title = "Session from : "+author->friendlyName() ;
     QList<Tomahawk::query_ptr> queries =  mySession->getTrackstoQuery() ;
 
-    playlist_ptr playlist = Tomahawk::Playlist::create( SourceList::instance()->getLocal(), uuid(), title, "", "", false, queries);
-    ViewManager::instance()->show( playlist );
+    Tomahawk::ViewPage* view = ViewManager::instance()->createPageForList( title, queries );
+    ViewManager::instance()->show( view );
 
 }
