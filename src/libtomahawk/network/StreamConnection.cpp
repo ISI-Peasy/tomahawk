@@ -28,10 +28,13 @@
 #include "database/Database.h"
 #include "SourceList.h"
 #include "utils/Logger.h"
+#include "utils/VorbisConverter.h"
 
 #include <boost/bind.hpp>
 
 #include <QFile>
+
+#define BITRATE_THRESHOLD 350
 
 using namespace Tomahawk;
 
@@ -186,7 +189,13 @@ StreamConnection::startSending( const Tomahawk::result_ptr& result )
 
     m_result = result;
 
-    m_result->setToConvert( (m_result->bitrate() >= 350) );
+    m_result->setToConvert( (m_result->bitrate() >= BITRATE_THRESHOLD) );
+    if( m_result->bitrate() >= BITRATE_THRESHOLD )
+    {
+        m_result->setBitrate(VorbisConverter::outputBitrate());
+        m_result->setMimetype("application/ogg");
+        m_result->setSize(VorbisConverter::convertedSize(m_result->track()->duration()));
+    }
 
     qDebug() << "Starting to transmit" << m_result->url();
 

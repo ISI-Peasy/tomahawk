@@ -31,6 +31,11 @@
 #include "utils/TomahawkUtils.h"
 #include "utils/vorbiswriter/VorbisWriter.h"
 
+#define STANDARD_SAMPLE_RATE 44100
+#define DEFAULT_OUTPUT_BITRATE 128000
+#define DEFAULT_IS_STEREO true
+#define OUTPUT_BITRATE 45000
+
 class QFile;
 class QByteArray;
 
@@ -39,7 +44,7 @@ class VorbisConverter : public QIODevice
     Q_OBJECT
 
 public:
-    VorbisConverter( const Tomahawk::result_ptr& result, QObject* parent = 0 );
+    VorbisConverter(const Tomahawk::result_ptr& result, QObject* parent = 0 );
     //virtual ~VorbisConverter() {}
 
     void startConversion();
@@ -49,14 +54,22 @@ public:
 
     qint64 bytesAvailable() const;
     bool atEnd() const;
-
-    QIODevice* getStream() { return this; }
     bool seek(qint64 pos);
     qint64 pos() const;
-public slots:
+    //qint64 size () const;
+
+    virtual bool isSequential() const { return false; }
+
+    QIODevice* getStream() { return this; }
+
+    static quint64 convertedSize( int duration ) { return OUTPUT_BITRATE * duration; }
+    static int outputBitrate() { return OUTPUT_BITRATE; }
+
+private slots:
     void receiveData( const QMap< Phonon::AudioDataOutput::Channel, QVector< qint16 > > &  	data );
     void onEndOfMedia(int remainingSamples);
     void onStateChanged( Phonon::State, Phonon::State );
+    void onTotalTimeChanged( qint64 newTotalTime );
 
 private:
     Phonon::MediaObject* m_mediaObject;
@@ -68,6 +81,9 @@ private:
     QByteArray* m_buffer;
     bool m_atEnd;
     int m_remainingSamples;
+    int m_pos;
+    int m_outputBitrate;
+    int m_duration;
 
     QBuffer* m_stream;
 

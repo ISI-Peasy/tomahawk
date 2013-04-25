@@ -38,7 +38,7 @@ public:
     VorbisWriter( QByteArray* );
     virtual ~VorbisWriter();
 
-    virtual bool open( long, bool, int quality = 10 );
+    virtual bool open(long, bool, int bitrate );
     virtual void close();
     virtual bool write(const qint16*, const qint16*, long, bool = false);
 
