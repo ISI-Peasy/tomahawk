@@ -247,7 +247,7 @@ SessionHistoryModel::data( const QModelIndex& index, int role ) const
     }
     case SessionRole:
     {
-        return QVariant(mySession->getPredominantArtist()+" : "+QString::number(mySession->count())) ;
+        return QVariant(mySession->getPredominantArtist()) ;
     }
     case PlaytimeRole:
     {
