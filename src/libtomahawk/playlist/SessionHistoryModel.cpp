@@ -35,7 +35,7 @@
 
 #define HISTORY_SESSION_ITEMS 100
 
-const static int MAX_TIME_BETWEEN_TRACKS = 10 * 60 * 60;
+const static int MAX_TIME_BETWEEN_TRACKS = 5 * 60;
 const static int MIN_SESSION_COUNT = 1;
 
 using namespace Tomahawk;
@@ -184,7 +184,7 @@ SessionHistoryModel::sessionsFromQueries( const QList<Tomahawk::track_ptr>& trac
             //add the current query in the new session
             oneSession->addQuery(currentTrack);
         }
-        lastTimeStamp = currentTrack.second.timestamp + currentTrack.first->duration() ;
+        lastTimeStamp = currentTrack.second.timestamp + currentTrack.second.secsPlayed ;
     }
 
     //add the last session in the session list only if session contains MIN_SESSION_COUNT at least
