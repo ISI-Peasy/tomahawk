@@ -72,7 +72,7 @@ WelcomeWidget::WelcomeWidget( QWidget* parent )
    // updatePlaylists();
 
     m_sessionsModel = new SessionHistoryModel(ui->sessionsView) ;
-    ui->sessionsView->setItemDelegate( new SessionDelegate() );
+    ui->sessionsView->setItemDelegate( new SessionDelegate(ui->sessionsView) );
     ui->sessionsView->setModel( m_sessionsModel );
     m_sessionsModel->setSource( source_ptr() );
 
@@ -157,11 +157,6 @@ void
 WelcomeWidget::updateRecentAdditions()
 {
     m_recentAlbumsModel->addFilteredCollection( collection_ptr(), 20, DatabaseCommand_AllAlbums::ModificationTime, true );
-}
-
-void WelcomeWidget::onCoverLoaded()
-{
-    m_sessionsModel->loadHistory();
 }
 
 void
@@ -356,6 +351,14 @@ PlaylistWidget::setModel( QAbstractItemModel* model )
 }
 
 void
+SessionDelegate::onCoverLoaded()
+{
+    m_view->update();
+    tDebug() << "Passage dans le SLOT onCoverLoaded";
+}
+
+
+void
 SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
     QStyleOptionViewItemV4 opt = option;
@@ -386,17 +389,11 @@ SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, c
 
     QPixmap icon;
     QRect pixmapRect = option.rect.adjusted( 10, 14, -option.rect.width() + option.rect.height() - 18, -14 );
-
-    //    QFile file("iconLOL");
-    //    file.open(QIODevice::WriteOnly);
-    //    tDebug() << "almost any qt value object";
-    //    icon.save(&file, "PNG");
-
     QString artist = index.data(SessionHistoryModel::SessionRole).toString();
-    icon = Artist::get(artist)->cover(pixmapRect.size());
-
-    connect(Artist::get(artist).data(),SIGNAL(coverChanged()), this->sender(), SLOT(onCoverLoaded()));
+    icon = TomahawkUtils::createRoundedImage(Artist::get(artist)->cover(pixmapRect.size()),pixmapRect.size());
     painter->drawPixmap( pixmapRect, icon );
+
+    connect(Artist::get(artist).data(),SIGNAL(coverChanged()), this, SLOT(onCoverLoaded()));
 
 
     QRect r( option.rect.width() - option.fontMetrics.height() * 2.5 - 10, option.rect.top() + option.rect.height() / 3 - option.fontMetrics.height(), option.fontMetrics.height() * 2.5, option.fontMetrics.height() * 2.5 );
@@ -416,7 +413,6 @@ SessionDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, c
     const int leftEdge = opt.rect.width() - qMin( avatarNameRect.left(), r.left() );
     QString descText;
     descText = TomahawkUtils::ageToString( QDateTime::fromTime_t(index.data(SessionHistoryModel::PlaytimeRole).value< unsigned int>()), true );
-//    descText = "session écoutée il y a " + index.data( SessionHistoryModel::PlaytimeRole ).toString();
 
     QColor c = painter->pen().color();
     if ( !( option.state & QStyle::State_Selected && option.state & QStyle::State_Active ) )

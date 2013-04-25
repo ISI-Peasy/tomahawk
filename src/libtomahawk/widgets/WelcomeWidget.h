@@ -62,10 +62,13 @@ class DLLEXPORT SessionDelegate : public QStyledItemDelegate
 Q_OBJECT
 
 public:
-    SessionDelegate(){}
+    SessionDelegate(QListView* parent =0):m_view( parent ){}
+private slots:
+        void onCoverLoaded();
 protected:
     void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
     QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+    QListView * m_view ;
 };
 
 class DLLEXPORT PlaylistWidget : public QListView
@@ -115,7 +118,6 @@ signals:
 public slots:
     void updatePlaylists();
     void updateRecentAdditions();
-    void onCoverLoaded();
 
     void loadData();
 
