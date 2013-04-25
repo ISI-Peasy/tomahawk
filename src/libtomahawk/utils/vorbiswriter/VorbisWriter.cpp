@@ -84,7 +84,7 @@ VorbisWriter::~VorbisWriter() {
 }
 
 bool
-VorbisWriter::open ( long sampleRate, bool stereo, int quality )
+VorbisWriter::open ( long sampleRate, bool stereo, int bitrate )
 {
     if ( !AudioFileWriter::open( sampleRate, stereo ) )
     {
@@ -95,9 +95,14 @@ VorbisWriter::open ( long sampleRate, bool stereo, int quality )
 	pd = new VorbisWriterPrivateData;
 	vorbis_info_init(&pd->vi);
 
-	if (vorbis_encode_init_vbr(&pd->vi, m_stereo ? 2 : 1, m_sampleRate, (float)quality / 10.0f) != 0) {
+    //Quality from -1 to 10 (-0.1 to 1)
+    //from 45kbs/s to 499kb/s (4-8ko/s - 50ko/s)
+//    if (vorbis_encode_init_vbr(&pd->vi, m_stereo ? 2 : 1, m_sampleRate, (float)10 / 10.0f) != 0)
+    if ( vorbis_encode_init( &pd->vi, m_stereo ? 2 : 1, m_sampleRate, bitrate, bitrate, bitrate ) != 0 )
+    {
 		delete pd;
 		pd = NULL;
+        tDebug() << "Failed to open stream for conversion";
 		return false;
 	}
 
@@ -133,8 +138,6 @@ VorbisWriter::open ( long sampleRate, bool stereo, int quality )
     while (ogg_stream_flush(&pd->os, &pd->og) != 0) {
         m_stream->write((const char *)pd->og.header, pd->og.header_len);
         m_stream->write((const char *)pd->og.body, pd->og.body_len);
-//        m_array->append((const char *)pd->og.header, pd->og.header_len);
-//         m_array->append((const char *)pd->og.body, pd->og.body_len);
     }
 
 	return true;
@@ -200,8 +203,6 @@ bool VorbisWriter::write(const qint16* left, const qint16* right, long samples, 
                     tDebug() << "VorbisWriter : writing " << pd->og.header_len;
                     m_stream->write((const char *)pd->og.header, pd->og.header_len);
                     m_stream->write((const char *)pd->og.body, pd->og.body_len);
-//                     m_array->append((const char *)pd->og.header, pd->og.header_len);
-//                     m_array->append((const char *)pd->og.body, pd->og.body_len);
 
 					if (ogg_page_eos(&pd->og))
 						eos = 1;
