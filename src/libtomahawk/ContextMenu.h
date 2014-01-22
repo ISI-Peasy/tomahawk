@@ -46,8 +46,7 @@ public:
        ActionTrackPage =    65,
        ActionArtistPage =   66,
        ActionAlbumPage =    67,
-       ActionEditMetadata = 128,
-       ActionPlaylist =     256
+       ActionEditMetadata = 128
     };
 
     explicit ContextMenu( QWidget* parent = 0 );
